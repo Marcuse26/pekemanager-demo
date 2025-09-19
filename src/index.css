@@ -1,0 +1,57 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #f0f2f5; /* Un color de fondo suave */
+}
+
+/* Contenedor para la información de contacto */
+.support-info {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  text-align: right;
+  color: #6c757d;
+}
+
+.support-info p {
+  margin: 5px 0 0 0;
+  font-size: 14px;
+}:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: #213547;
+  background-color: #ffffff;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- CAMBIOS IMPORTANTES AQUÍ --- */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* Se eliminan las propiedades 'display: flex' y 'place-items: center' 
+     para que el contenido no se centre y ocupe todo el espacio. */
+}
