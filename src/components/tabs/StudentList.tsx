@@ -4,6 +4,17 @@ import { Download, Trash2 } from 'lucide-react';
 import { styles } from '../../styles';
 import type { Student } from '../../types';
 
+// --- INICIO DE LA CORRECCIÓN ---
+// Esta interfaz faltaba
+interface StudentListProps {
+    students: Student[];
+    onSelectChild: (student: Student) => void;
+    onDeleteChild: (id: string, name: string) => void;
+    onExport: () => void;
+}
+// --- FIN DE LA CORRECCIÓN ---
+
+
 // --- LÓGICA DE FECHAS ---
 const today = new Date();
 today.setHours(0, 0, 0, 0); // Normalizar a medianoche
@@ -49,7 +60,6 @@ const isStudentActiveThisMonth = (student: Student): boolean => {
     return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
 }
 
-// --- LÓGICA MODIFICADA ---
 /**
  * Comprueba si un alumno estará activo *en cualquier momento* del PRÓXIMO mes.
  * (Incluye activos que continúan Y nuevos que empiezan)
@@ -70,7 +80,6 @@ const isStudentActiveNextMonth = (student: Student): boolean => {
 
     return startsBeforeOrDuringNextMonth && endsAfterOrDuringNextMonth;
 }
-// --- FIN LÓGICA MODIFICADA ---
 
 
 const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: StudentListProps) => {
