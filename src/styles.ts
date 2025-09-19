@@ -50,13 +50,20 @@ export const styles: { [key: string]: React.CSSProperties } = {
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '30px' },
   card: { backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' },
   cardTitle: { marginTop: 0, marginBottom: '20px', fontSize: '20px', color: '#343a40', fontWeight: '600' },
-  listContainer: { maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' },
+  
+  // --- MODIFICADO ---
+  listContainer: { height: 'calc(100vh - 350px)', overflowY: 'auto' }, // Altura fija
+  
   listContainerSmall: { maxHeight: '150px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '10px' },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 5px', borderBottom: '1px solid #f1f3f5' },
   listItemName: { margin: 0, fontWeight: '500', color: '#343a40' },
   listItemInfo: { margin: '4px 0 0 0', fontSize: '14px', color: '#6c757d' },
   pillSuccess: { backgroundColor: 'rgba(40, 167, 69, 0.1)', color: '#155724', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
   pillWarning: { backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#856404', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
+  
+  // --- AÑADIDO ---
+  pillInactive: { backgroundColor: 'rgba(108, 117, 125, 0.1)', color: '#343a40', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
+
   pillInfo: { backgroundColor: 'rgba(0, 123, 255, 0.1)', color: '#004085', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' },
   formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' },
   formInput: { display: 'block', width: '100%', boxSizing: 'border-box', padding: '12px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', marginBottom: '10px' },
@@ -112,5 +119,27 @@ export const styles: { [key: string]: React.CSSProperties } = {
         marginBottom: '20px'
     },
     statCardText: { margin: 0, color: '#6c757d', fontSize: '14px' },
-    statCardNumber: { color: '#212529', fontSize: '22px', fontWeight: '600' }
+    statCardNumber: { color: '#212529', fontSize: '22px', fontWeight: '600' },
+
+    // --- AÑADIDOS PARA SUB-PESTAÑAS ---
+    subTabContainer: {
+        display: 'flex',
+        borderBottom: '1px solid #dee2e6',
+        marginBottom: '20px',
+    },
+    subTabButton: {
+        padding: '10px 20px',
+        border: 'none',
+        backgroundColor: 'transparent',
+        cursor: 'pointer',
+        fontSize: '15px',
+        color: '#495057',
+        borderBottom: '2px solid transparent',
+        marginBottom: '-1px', // Para que el borde activo solape
+    },
+    subTabButtonActive: {
+        color: '#007bff',
+        borderBottom: '2px solid #007bff',
+        fontWeight: '600',
+    },
 };
