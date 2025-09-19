@@ -1,6 +1,6 @@
 // Contenido COMPLETO para: src/components/tabs/NewStudentForm.tsx
 
-import React from 'react'; // Solo necesita React para JSX, no necesita hooks
+import React from 'react'; 
 import { styles } from '../../styles';
 import type { StudentFormData, Schedule } from '../../types';
 
@@ -29,7 +29,22 @@ const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewS
             <div style={styles.formGrid}>
                 <input name="name" value={childForm.name} onChange={handleInputChange} placeholder="Nombre del Alumno" style={styles.formInput} required />
                 <input name="surname" value={childForm.surname} onChange={handleInputChange} placeholder="Apellidos" style={styles.formInput} required />
-                <input name="birthDate" type="date" value={childForm.birthDate} onChange={handleInputChange} style={{...styles.formInput, gridColumn: '1 / -1'}} required />
+                
+                {/* --- INICIO DE CAMBIOS --- */}
+                <div>
+                    <label style={styles.formLabel}>Fecha de Nacimiento</label>
+                    <input name="birthDate" type="date" value={childForm.birthDate} onChange={handleInputChange} style={{...styles.formInput, marginBottom: 0}} required />
+                </div>
+                <div>
+                    <label style={styles.formLabel}>Fecha de Alta</label>
+                    <input name="startMonth" type="date" value={childForm.startMonth || ''} onChange={handleInputChange} style={{...styles.formInput, marginBottom: 0}} />
+                </div>
+                <div style={{gridColumn: '1 / -1'}}>
+                    <label style={styles.formLabel}>Fecha de Baja (Opcional)</label>
+                    <input name="plannedEndMonth" type="date" value={childForm.plannedEndMonth || ''} onChange={handleInputChange} style={{...styles.formInput, marginBottom: 0}} />
+                </div>
+                {/* --- FIN DE CAMBIOS --- */}
+
                 <input name="address" value={childForm.address} onChange={handleInputChange} placeholder="Dirección Completa" style={{...styles.formInput, gridColumn: '1 / -1'}} />
                 <input name="fatherName" value={childForm.fatherName} onChange={handleInputChange} placeholder="Nombre del Padre" style={styles.formInput} />
                 <input name="phone1" type="tel" value={childForm.phone1} onChange={handleInputChange} placeholder="Teléfono 1" style={styles.formInput} required />

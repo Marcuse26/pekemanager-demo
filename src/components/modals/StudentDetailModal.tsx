@@ -83,6 +83,12 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                     <div style={styles.modalSection}>
                         <h3 style={styles.modalSectionTitle}>Datos Personales</h3>
                         <p><strong>F. Nacimiento:</strong> {isEditing ? <input type="date" name="birthDate" value={editedStudent.birthDate} onChange={handleInputChange} style={styles.formInputSmall}/> : student.birthDate}</p>
+                        
+                        {/* --- INICIO DE CAMBIOS --- */}
+                        <p><strong>Fecha Alta:</strong> {isEditing ? <input type="date" name="startMonth" value={editedStudent.startMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.startMonth || 'No especificada'}</p>
+                        <p><strong>Fecha Baja:</strong> {isEditing ? <input type="date" name="plannedEndMonth" value={editedStudent.plannedEndMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.plannedEndMonth || 'No especificada'}</p>
+                        {/* --- FIN DE CAMBIOS --- */}
+
                         <p><strong>Dirección:</strong> {isEditing ? <input type="text" name="address" value={editedStudent.address} onChange={handleInputChange} style={styles.formInputSmall}/> : student.address}</p>
                         <p><strong>Alergias:</strong> {isEditing ? <textarea name="allergies" value={editedStudent.allergies} onChange={handleInputChange} style={styles.formInputSmall}/> : student.allergies || 'Ninguna'}</p>
                     </div>
