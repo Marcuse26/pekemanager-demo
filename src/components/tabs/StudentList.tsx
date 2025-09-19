@@ -4,16 +4,12 @@ import { Download, Trash2 } from 'lucide-react';
 import { styles } from '../../styles';
 import type { Student } from '../../types';
 
-// --- INICIO DE LA CORRECCIÓN ---
-// Esta interfaz faltaba
 interface StudentListProps {
     students: Student[];
     onSelectChild: (student: Student) => void;
     onDeleteChild: (id: string, name: string) => void;
     onExport: () => void;
 }
-// --- FIN DE LA CORRECCIÓN ---
-
 
 // --- LÓGICA DE FECHAS ---
 const today = new Date();
@@ -26,21 +22,6 @@ const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 // Rango del mes que viene
 const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-
-/**
- * Comprueba si un alumno está activo en una fecha específica (hoy).
- */
-const isStudentActiveOnDate = (student: Student, date: Date): boolean => {
-    if (!student.startMonth) return false; // No puede estar activo si no tiene fecha de alta
-    
-    const startDate = new Date(student.startMonth);
-    const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-
-    // Está activo si:
-    // 1. Su alta es hoy o antes
-    // 2. Y (no tiene fecha de baja O su fecha de baja es hoy o después)
-    return startDate <= date && (!endDate || endDate >= date);
-};
 
 /**
  * Comprueba si un alumno está activo *en cualquier momento* de ESTE mes.
@@ -75,17 +56,17 @@ const isStudentActiveNextMonth = (student: Student): boolean => {
     const startsBeforeOrDuringNextMonth = startDate <= lastDayNextMonth;
     
     // El alumno (no tiene baja O su baja es *después* de que EMPIECE el próximo mes)
-    // Esto cumple tu petición: "q no tengan fecha de baja o una fecha de baja correspondiente a uno o varios meses próximos"
     const endsAfterOrDuringNextMonth = !endDate || endDate >= firstDayNextMonth;
 
     return startsBeforeOrDuringNextMonth && endsAfterOrDuringNextMonth;
 }
+// --- FIN LÓGICA DE FECHAS ---
 
 
 const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: StudentListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  // 'proximos' ahora significa "activos el próximo mes"
-  const [activeSubTab, setActiveSubTab] = useState<'activos' | 'todos' | 'proximos'>('activos');
+  // Estado con 4 opciones
+  const [activeSubTab, setActiveSubTab] = useState<'activos' | 'proximos' | 'inactivos' | 'todos'>('activos');
 
   // Filtramos por búsqueda primero
   const filteredStudents = useMemo(() => {
@@ -96,29 +77,37 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
 
   // --- Listas Memoizadas para cada sub-pestaña ---
 
-  // 1. Lista "Activos (Este Mes)"
+  // 1. "Activos" (Este Mes)
   const activeStudents = useMemo(() => {
       return filteredStudents
           .filter(isStudentActiveThisMonth)
           .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
   }, [filteredStudents]);
 
-  // 2. Lista "Historial (Todos)" (con estado de actividad de HOY)
+  // 2. "Activos (próximo mes)"
+  const nextMonthStudents = useMemo(() => {
+      return filteredStudents
+          .filter(isStudentActiveNextMonth)
+          .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
+  }, [filteredStudents]);
+
+  // 3. "Inactivos" (Este Mes) - NUEVA
+  const inactiveStudents = useMemo(() => {
+      return filteredStudents
+          .filter(student => !isStudentActiveThisMonth(student)) // Lógica inversa a "Activos"
+          .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
+  }, [filteredStudents]);
+
+  // 4. "Todos" (con estado de actividad de ESTE MES)
   const allStudentsWithStatus = useMemo(() => {
       return filteredStudents
           .map(student => ({
               ...student,
-              isCurrentlyActive: isStudentActiveOnDate(student, today) // Usa la función de fecha específica
+              isCurrentlyActive: isStudentActiveThisMonth(student) // Comparamos con este mes
           }))
           .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents, today]); // Añadido today como dependencia
-
-  // 3. Lista "Activos (Próximo Mes)"
-  const nextMonthStudents = useMemo(() => {
-      return filteredStudents
-          .filter(isStudentActiveNextMonth) // Usa la nueva lógica
-          .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
   }, [filteredStudents]);
+
   
   // --- Renderizado de la lista basado en la pestaña activa ---
   const renderList = () => {
@@ -128,11 +117,14 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
         case 'activos':
             listToRender = activeStudents;
             break;
-        case 'todos':
-            listToRender = allStudentsWithStatus;
-            break;
         case 'proximos':
             listToRender = nextMonthStudents;
+            break;
+        case 'inactivos':
+            listToRender = inactiveStudents;
+            break;
+        case 'todos':
+            listToRender = allStudentsWithStatus;
             break;
     }
 
@@ -142,8 +134,8 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
                 <p style={styles.listItemName}>{child.name} {child.surname}</p>
                 <p style={styles.listItemInfo}>
                     Titular: {child.accountHolderName || 'No especificado'}
-                    {/* Mostramos fechas de alta/baja solo en la vista de historial si está inactivo */}
-                    {activeSubTab === 'todos' && child.isCurrentlyActive === false && (
+                    {/* Mostramos fechas de alta/baja en 'Inactivos' y 'Todos' para dar contexto */}
+                    {(activeSubTab === 'inactivos' || (activeSubTab === 'todos' && !child.isCurrentlyActive)) && (
                         <span style={{...styles.listItemInfo, marginLeft: '10px', color: '#dc3545'}}>
                             (Alta: {child.startMonth || 'N/A'} {child.plannedEndMonth ? `- Baja: ${child.plannedEndMonth}` : ''})
                         </span>
@@ -169,8 +161,9 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
   const getActiveListCount = () => {
     switch(activeSubTab) {
         case 'activos': return activeStudents.length;
-        case 'todos': return allStudentsWithStatus.length;
         case 'proximos': return nextMonthStudents.length;
+        case 'inactivos': return inactiveStudents.length;
+        case 'todos': return allStudentsWithStatus.length;
     }
   }
 
@@ -190,29 +183,34 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
             </div>
         </div>
 
-        {/* --- CONTENEDOR DE SUB-PESTAÑAS (Etiquetas actualizadas) --- */}
+        {/* --- CONTENEDOR DE SUB-PESTAÑAS (4 pestañas) --- */}
         <div style={styles.subTabContainer}>
             <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'activos' ? styles.subTabButtonActive : {})}}
                 onClick={() => setActiveSubTab('activos')}
             >
-                Activos (Este Mes) ({activeStudents.length})
+                Activos ({activeStudents.length})
             </button>
             <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'proximos' ? styles.subTabButtonActive : {})}}
                 onClick={() => setActiveSubTab('proximos')}
             >
-                Activos (Próximo Mes) ({nextMonthStudents.length})
+                Activos (próximo mes) ({nextMonthStudents.length})
+            </button>
+            <button 
+                style={{...styles.subTabButton, ...(activeSubTab === 'inactivos' ? styles.subTabButtonActive : {})}}
+                onClick={() => setActiveSubTab('inactivos')}
+            >
+                Inactivos ({inactiveStudents.length})
             </button>
             <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'todos' ? styles.subTabButtonActive : {})}}
                 onClick={() => setActiveSubTab('todos')}
             >
-                Historial (Todos) ({allStudentsWithStatus.length})
+                Todos ({allStudentsWithStatus.length})
             </button>
         </div>
         
-        {/* El contenedor de la lista ahora usa el estilo modificado con altura fija */}
         <div style={styles.listContainer}>
             {renderList()}
         </div>
