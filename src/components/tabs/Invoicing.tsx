@@ -1,5 +1,5 @@
 // Contenido para: src/components/tabs/Invoicing.tsx
-import { useState, useMemo } from 'react'; // AÑADIDOS
+import { useState, useMemo } from 'react';
 import { Download } from 'lucide-react';
 import { styles } from '../../styles';
 import type { Invoice, Config } from '../../types';
@@ -18,36 +18,45 @@ const currentYear = new Date().getFullYear();
 const Invoicing = ({ invoices, onUpdateStatus, config, onExport }: InvoicingProps) => {
     // Estado para la sub-pestaña activa
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas'>('actual');
+    // --- NUEVO ESTADO PARA EL BUSCADOR ---
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => { onUpdateStatus(invoiceId, newStatus); };
 
-    // --- Listas Memoizadas ---
-    const { currentMonthInvoices, pastInvoices } = useMemo(() => {
+    // --- Listas Memoizadas (separadas para optimizar el buscador) ---
+
+    // 1. Facturas del mes actual (SIN buscador)
+    const currentMonthInvoices = useMemo(() => {
         const current: Invoice[] = [];
+        for (const inv of invoices) {
+            const invDate = new Date(inv.date);
+            if (invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear) {
+                current.push(inv);
+            }
+        }
+        // Ordenar las actuales por nombre
+        return current.sort((a, b) => a.childName.localeCompare(b.childName));
+    }, [invoices]); // No depende de searchTerm
+
+    // 2. Facturas pasadas (CON buscador)
+    const pastInvoices = useMemo(() => {
         const past: Invoice[] = [];
-        
         const firstDayOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+        const lowerSearchTerm = searchTerm.toLowerCase();
 
         for (const inv of invoices) {
             const invDate = new Date(inv.date);
-            // Comprueba si la factura es del mes y año actuales
-            if (invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear) {
-                current.push(inv);
-            } 
-            // Comprueba si la factura es anterior al primer día de este mes
-            else if (invDate < firstDayOfCurrentMonth) {
-                past.push(inv);
+            // Si la factura es anterior a este mes
+            if (invDate < firstDayOfCurrentMonth) {
+                // Aplicar filtro de búsqueda por nombre
+                if (inv.childName.toLowerCase().includes(lowerSearchTerm)) {
+                    past.push(inv);
+                }
             }
-            // (Las facturas futuras, si las hubiera, no se muestran en ninguna)
         }
-
-        // Ordenar las actuales por nombre
-        current.sort((a, b) => a.childName.localeCompare(b.childName));
         // Ordenar las pasadas por fecha (la más nueva primero)
-        past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); 
-
-        return { currentMonthInvoices: current, pastInvoices: past };
-    }, [invoices]); // Se recalcula solo si la lista de facturas cambia
+        return past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); 
+    }, [invoices, searchTerm]); // Ahora depende de searchTerm
     // --- Fin Listas Memoizadas ---
 
     // Determina qué lista mostrar
@@ -56,18 +65,42 @@ const Invoicing = ({ invoices, onUpdateStatus, config, onExport }: InvoicingProp
 
     return (
         <div style={styles.card}>
+            {/* --- HEADER MODIFICADO CON BUSCADOR --- */}
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <h3 style={{...styles.cardTitle, marginBottom: 0}}>
+                <h3 style={{...styles.cardTitle, marginBottom: 0, flexShrink: 0}}>
                     Facturación ({listCount})
                 </h3>
-                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Todo</button>
+                
+                {/* El buscador solo aparece si la pestaña "pasadas" está activa */}
+                {activeSubTab === 'pasadas' ? (
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre en facturas pasadas..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
+                    />
+                ) : (
+                    // Espaciador para mantener el botón de exportar a la derecha
+                    <div style={{flex: 1}}></div> 
+                )}
+
+                <button 
+                    onClick={onExport} 
+                    style={{...styles.actionButton, backgroundColor: '#17a2b8', flexShrink: 0}}
+                >
+                    <Download size={16} style={{marginRight: '8px'}} />Exportar Todo
+                </button>
             </div>
+            {/* --- FIN HEADER --- */}
+
 
             {/* --- CONTENEDOR DE SUB-PESTAÑAS --- */}
             <div style={styles.subTabContainer}>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
-                    onClick={() => setActiveSubTab('actual')}
+                    // Al volver a "actual", limpiamos el buscador
+                    onClick={() => { setActiveSubTab('actual'); setSearchTerm(''); }}
                 >
                     Facturas de este mes ({currentMonthInvoices.length})
                 </button>
@@ -85,7 +118,6 @@ const Invoicing = ({ invoices, onUpdateStatus, config, onExport }: InvoicingProp
                     <div key={inv.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{inv.childName}</p>
-                            {/* Usamos toLocaleDateString para formatear mejor la fecha */}
                             <p style={styles.listItemInfo}>
                                 Fecha: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
                             </p>
