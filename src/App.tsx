@@ -1,5 +1,7 @@
+// Contenido para: src/App.tsx
+
 // --- Importaciones de React y Librerías ---
-import { useState, useEffect } from 'react'; // CORREGIDO: 'React' eliminado (TS6133)
+import { useState, useEffect, useCallback } from 'react'; // 'useCallback' AÑADIDO
 import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 // @ts-ignore
@@ -120,7 +122,7 @@ const App = () => {
     
     return () => unsubscribers.forEach(unsub => unsub());
 
-  }, [userId]); 
+  }, [userId]); // <- La dependencia appId se elimina de aquí, ya que es constante
 
   useEffect(() => {
       if(selectedChild) {
@@ -138,7 +140,10 @@ const App = () => {
   
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
   
-  const addAppHistoryLog = async (user: string, action: string, details: string) => {
+  // --- INICIO DE MODIFICACIÓN: Facturación Automática ---
+
+  // 1. La función addAppHistoryLog la envolvemos en useCallback
+  const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
         user,
@@ -152,7 +157,92 @@ const App = () => {
     } catch (error) {
         console.error("Error logging history:", error);
     }
-  };
+  }, [userId, appId]); // Dependencias de la función
+
+  // 2. useEffect para la facturación automática
+  useEffect(() => {
+    // No ejecutar si los datos principales no están listos
+    if (isLoading || !userId || children.length === 0) return;
+
+    const month = new Date().getMonth();
+    const year = new Date().getFullYear();
+
+    const runSilentInvoiceUpdate = async () => {
+        for (const child of children) {
+            const schedule = schedules.find(s => s.id === child.schedule);
+            if (!schedule) continue; // Si no tiene horario, no se puede facturar
+
+            // Filtra penalizaciones del mes actual para este niño
+            const childPenalties = penalties.filter(p => 
+                p.childId === child.numericId && 
+                new Date(p.date).getMonth() === month && 
+                new Date(p.date).getFullYear() === year
+            );
+            const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
+            
+            let totalAmount = schedule.price + totalPenalties;
+            let enrollmentFeeApplied = false;
+            
+            // Añade matrícula si no está pagada
+            if (!child.enrollmentPaid) { 
+                totalAmount += 100;
+                enrollmentFeeApplied = true;
+            }
+            
+            // Prepara los datos de la factura
+            const invoiceData: Omit<Invoice, 'id' | 'status'> = {
+                numericId: Date.now() + child.numericId, // Esto se sobrescribirá si ya existe
+                childId: child.numericId,
+                childName: `${child.name} ${child.surname}`,
+                date: new Date().toISOString().split('T')[0],
+                amount: totalAmount,
+                base: schedule.price,
+                penalties: totalPenalties,
+                enrollmentFeeIncluded: enrollmentFeeApplied,
+            };
+
+            const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
+            const existingInvoice = invoices.find(inv => 
+                inv.childId === child.numericId && 
+                new Date(inv.date).getMonth() === month && 
+                new Date(inv.date).getFullYear() === year
+            );
+            
+            try {
+                if (existingInvoice) {
+                    // Si ya existe, solo actualizamos si hay cambios
+                    if (existingInvoice.amount !== invoiceData.amount || 
+                        existingInvoice.base !== invoiceData.base || 
+                        existingInvoice.penalties !== invoiceData.penalties ||
+                        existingInvoice.enrollmentFeeIncluded !== invoiceData.enrollmentFeeIncluded
+                    ) {
+                        // Mantenemos el estado ('Pagada', 'Vencida') que ya tuviera
+                        await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
+                            ...invoiceData,
+                            numericId: existingInvoice.numericId, // Mantenemos el ID numérico original
+                            status: existingInvoice.status, // Mantenemos el estado actual
+                        });
+                    }
+                } else {
+                    // Si no existe, la creamos como 'Pendiente'
+                    await addDoc(collection(db, invoicesCollectionPath), {
+                        ...invoiceData,
+                        status: 'Pendiente' as Invoice['status'],
+                    });
+                }
+            } catch(e) { 
+                console.error("Error auto-updating invoice for ", child.name, e)
+            }
+        }
+    };
+
+    runSilentInvoiceUpdate();
+
+  // Se ejecuta si cambian los alumnos, penalizaciones, config (tarifa), o las propias facturas (para saber si existen)
+  }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
+  
+  // --- FIN DE MODIFICACIÓN ---
+
 
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
@@ -409,52 +499,8 @@ const App = () => {
     }
   };
 
-  const generateInvoices = async () => {
-    if (!userId) return;
-    const month = new Date().getMonth();
-    const year = new Date().getFullYear();
-    
-    for (const child of children) {
-        const schedule = schedules.find(s => s.id === child.schedule);
-        if (!schedule) continue;
-        const childPenalties = penalties.filter(p => p.childId === child.numericId && new Date(p.date).getMonth() === month && new Date(p.date).getFullYear() === year);
-        const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
-        let totalAmount = schedule.price + totalPenalties;
-        let enrollmentFeeApplied = false;
-        
-        if (!child.enrollmentPaid) { 
-            totalAmount += 100;
-            enrollmentFeeApplied = true;
-        }
-        
-        const invoiceData: Omit<Invoice, 'id'> = {
-            numericId: Date.now() + child.numericId,
-            childId: child.numericId,
-            childName: `${child.name} ${child.surname}`,
-            date: new Date().toISOString().split('T')[0],
-            amount: totalAmount,
-            base: schedule.price,
-            penalties: totalPenalties,
-            enrollmentFeeIncluded: enrollmentFeeApplied,
-            status: 'Pendiente' as Invoice['status'],
-        };
+  // --- La función manual 'generateInvoices' se ha eliminado ---
 
-        const existingInvoice = invoices.find(inv => inv.childId === child.numericId && new Date(inv.date).getMonth() === month && new Date(inv.date).getFullYear() === year);
-        const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
-        
-        try {
-            if (existingInvoice) {
-                await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), invoiceData);
-            } else {
-                await addDoc(collection(db, invoicesCollectionPath), invoiceData);
-            }
-        } catch(e) { console.error("Error generating/updating invoice for ", child.name, e)}
-    }
-    
-    addNotification(`${children.length} facturas generadas/actualizadas.`);
-    addAppHistoryLog(currentUser, 'Facturación', `Se han generado/actualizado ${children.length} facturas para el mes actual.`);
-  };
-  
     const handleUpdateInvoiceStatus = async (invoiceId: string, newStatus: Invoice['status']) => {
         if (!userId) return;
         try {
@@ -715,7 +761,8 @@ const App = () => {
           case 'calendario':
               return <CalendarView attendance={attendance} />;
           case 'facturacion':
-              return <Invoicing invoices={invoices} onGenerate={generateInvoices} onUpdateStatus={handleUpdateInvoiceStatus} config={config} onExport={() => handleExport('facturacion')} />;
+              // La prop 'onGenerate' se ha ELIMINADO de aquí
+              return <Invoicing invoices={invoices} onUpdateStatus={handleUpdateInvoiceStatus} config={config} onExport={() => handleExport('facturacion')} />;
           case 'penalizaciones':
               return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
           case 'control':
