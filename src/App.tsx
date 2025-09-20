@@ -156,14 +156,39 @@ const App = () => {
     }
   }, [userId, appId]);
 
+  // --- INICIO DE CORRECCIÓN: Facturación Automática ---
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
     const month = new Date().getMonth();
     const year = new Date().getFullYear();
 
+    // --- LÓGICA DE ACTIVIDAD (COPIADA DE STUDENTLIST) ---
+    const firstDayThisMonth = new Date(year, month, 1);
+    const lastDayThisMonth = new Date(year, month + 1, 0);
+
+    const isStudentActiveThisMonth = (student: Student): boolean => {
+        if (!student.startMonth) return false;
+        const startDate = new Date(student.startMonth);
+        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+
+        const startsBeforeOrDuringMonth = startDate <= lastDayThisMonth;
+        const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
+        
+        return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
+    }
+    // --- FIN LÓGICA DE ACTIVIDAD ---
+
     const runSilentInvoiceUpdate = async () => {
         for (const child of children) {
+
+            // --- ¡LA LÍNEA QUE FALTA! ---
+            // Si el alumno NO está activo este mes, no debe tener factura de este mes.
+            if (!isStudentActiveThisMonth(child)) {
+                continue; // Saltamos al siguiente niño
+            }
+            // --- FIN DE LA CORRECCIÓN ---
+
             const schedule = schedules.find(s => s.id === child.schedule);
             if (!schedule) continue;
 
@@ -228,6 +253,8 @@ const App = () => {
     runSilentInvoiceUpdate();
 
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
+  // --- FIN DE CORRECCIÓN ---
+
 
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
