@@ -312,7 +312,6 @@ const App = () => {
             }));
             break;
 
-        // --- INICIO DE CAMBIOS: Lógica de exportación de facturación ---
         case 'facturacion': 
             const activeStudentIds = new Set(
                 children
@@ -342,7 +341,6 @@ const App = () => {
                 Estado: i.status
             }));
             break;
-        // --- FIN DE CAMBIOS ---
 
         case 'penalizaciones': 
             const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
@@ -922,13 +920,14 @@ const App = () => {
               return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
             })}
 
-            {currentUser !== 'gonzalo' && (
+            {/* --- INICIO DE CAMBIO: Comprobación por el nuevo ID --- */}
+            {currentUser !== 'Gonzalo Navarro' && (
                 <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}>
                     <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span>
                 </button>
             )}
 
-            {currentUser === 'gonzalo' && (
+            {currentUser === 'Gonzalo Navarro' && (
               <>
                 {[
                   { id: 'personal', name: 'Personal', icon: Briefcase },
@@ -940,6 +939,7 @@ const App = () => {
                 })}
               </>
             )}
+            {/* --- FIN DE CAMBIO --- */}
 
           </div>
           <div>

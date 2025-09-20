@@ -45,14 +45,13 @@ const AttendanceManager = ({ students, attendance, onSave, onExport }: Attendanc
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{...styles.formInputSmall, width: '250px'}}
                     />
+                    {/* --- Texto del botón actualizado --- */}
                     <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Asistencia</button> {/* */}
                  </div>
                  {/* --- FIN DE CAMBIOS --- */}
             </div>
             <div style={styles.listContainer}> {/* */}
-                {/* --- INICIO DE CAMBIOS (mapeo sobre la lista filtrada) --- */}
                 {filteredAndSortedStudents.map(student => { // Modificado
-                {/* --- FIN DE CAMBIOS --- */}
                     const todayAttendance = attendance.find(a => a.childId === student.numericId && a.date === today); //
                     const currentData = attendanceData[student.numericId] || {}; //
                     return (
