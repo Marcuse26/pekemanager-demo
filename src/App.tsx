@@ -156,14 +156,14 @@ const App = () => {
     }
   }, [userId, appId]);
 
-  // --- INICIO DE CORRECCIÓN: Facturación Automática ---
+  // --- Lógica de Facturación Automática (CORREGIDA) ---
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
     const month = new Date().getMonth();
     const year = new Date().getFullYear();
 
-    // --- LÓGICA DE ACTIVIDAD (COPIADA DE STUDENTLIST) ---
+    // Lógica de actividad
     const firstDayThisMonth = new Date(year, month, 1);
     const lastDayThisMonth = new Date(year, month + 1, 0);
 
@@ -171,18 +171,15 @@ const App = () => {
         if (!student.startMonth) return false;
         const startDate = new Date(student.startMonth);
         const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-
         const startsBeforeOrDuringMonth = startDate <= lastDayThisMonth;
         const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
-        
         return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
     }
-    // --- FIN LÓGICA DE ACTIVIDAD ---
 
     const runSilentInvoiceUpdate = async () => {
         for (const child of children) {
 
-            // --- ¡LA LÍNEA QUE FALTA! ---
+            // --- ¡LA CORRECCIÓN CLAVE! ---
             // Si el alumno NO está activo este mes, no debe tener factura de este mes.
             if (!isStudentActiveThisMonth(child)) {
                 continue; // Saltamos al siguiente niño
@@ -253,7 +250,7 @@ const App = () => {
     runSilentInvoiceUpdate();
 
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
-  // --- FIN DE CORRECCIÓN ---
+
 
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
@@ -520,6 +517,30 @@ const App = () => {
         }
     };
 
+    // --- NUEVA FUNCIÓN AÑADIDA ---
+    const handleDeleteInvoice = (invoice: Invoice) => {
+        const onConfirmDelete = async () => {
+            if (!userId) return;
+            try {
+                const invoiceDocPath = `/artifacts/${appId}/public/data/invoices/${invoice.id}`;
+                await deleteDoc(doc(db, invoiceDocPath));
+                addNotification(`Factura de ${invoice.childName} eliminada.`);
+                addAppHistoryLog(currentUser, 'Eliminación Factura', `Se ha eliminado la factura ${invoice.numericId} de ${invoice.childName}.`);
+            } catch(error) {
+                console.error("Error deleting invoice: ", error);
+                addNotification("Error al eliminar la factura.");
+            }
+            setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} });
+        };
+
+        setConfirmModal({
+            isOpen: true,
+            message: `¿Estás seguro de que quieres eliminar esta factura de ${invoice.amount}${config.currency} para ${invoice.childName}? Esta acción no se puede deshacer.`,
+            onConfirm: onConfirmDelete,
+        });
+    };
+    // --- FIN NUEVA FUNCIÓN ---
+
     const handleUpdatePenalty = async (penaltyId: string, updates: Partial<Omit<Penalty, 'id'>>) => {
         if (!userId) return;
         try {
@@ -770,6 +791,7 @@ const App = () => {
                   onExport={() => handleExport('facturacion')} 
                   students={children}
                   onGeneratePastInvoice={handleGeneratePDFInvoice}
+                  onDeleteInvoice={handleDeleteInvoice} // <-- PROP AÑADIDA
               />;
           case 'penalizaciones':
               return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
@@ -897,4 +919,3 @@ const App = () => {
 };
 
 export default App;
-
