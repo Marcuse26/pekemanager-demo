@@ -1,6 +1,6 @@
 // Contenido para: src/components/tabs/Invoicing.tsx
 import { useState, useMemo } from 'react';
-import { Download, FileText, Trash2 } from 'lucide-react'; // <-- AÑADIDO Trash2
+import { Download, FileText, Trash2 } from 'lucide-react';
 import { styles } from '../../styles';
 import type { Invoice, Config, Student } from '../../types';
 
@@ -11,7 +11,7 @@ interface InvoicingProps {
     onExport: () => void;
     students: Student[];
     onGeneratePastInvoice: (student: Student, invoice: Invoice) => void;
-    onDeleteInvoice: (invoice: Invoice) => void; // <-- AÑADIDA PROP
+    onDeleteInvoice: (invoice: Invoice) => void;
 }
 
 // Lógica de fecha para filtrar (constantes globales)
@@ -25,28 +25,25 @@ const Invoicing = ({
     onExport, 
     students, 
     onGeneratePastInvoice, 
-    onDeleteInvoice // <-- AÑADIDA PROP
+    onDeleteInvoice
 }: InvoicingProps) => {
     
-    const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas'>('actual');
+    // --- CAMBIO: Estado con 3 opciones ---
+    const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => { onUpdateStatus(invoiceId, newStatus); };
 
     // --- INICIO DE LA MODIFICACIÓN ---
-    // El hook useMemo ahora filtra las facturas según el estado (activo/inactivo)
-    // del alumno al que pertenecen.
-    const { currentMonthInvoices, pastInvoices } = useMemo(() => {
-        const current: Invoice[] = [];
+    // El useMemo ahora clasifica en TRES listas, basándose en el estado del alumno
+    const { activeInvoices, pastInvoices, otherInvoices } = useMemo(() => {
+        const active: Invoice[] = [];
         const past: Invoice[] = [];
+        const other: Invoice[] = []; // <-- Nueva lista
         
-        // --- Definiciones de Fecha ---
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        // Usamos las consts 'currentMonth' y 'currentYear' definidas fuera del componente
+        // Definiciones de Fecha
         const firstDayThisMonth = new Date(currentYear, currentMonth, 1);
         const lastDayThisMonth = new Date(currentYear, currentMonth + 1, 0);
-        const lowerSearchTerm = searchTerm.toLowerCase();
 
         // --- Helpers de Estado de Alumno ---
         const isStudentActiveThisMonth = (student: Student): boolean => {
@@ -58,7 +55,7 @@ const Invoicing = ({
             return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
         }
 
-        const isStudentInactive = (student: Student): boolean => {
+        const isStudentInactivePast = (student: Student): boolean => {
             if (!student.plannedEndMonth) return false;
             const endDate = new Date(student.plannedEndMonth);
             return endDate < firstDayThisMonth; // Baja es anterior a este mes
@@ -69,42 +66,34 @@ const Invoicing = ({
             const student = students.find(s => s.numericId === inv.childId);
 
             if (!student) {
-                // Factura huérfana (sin alumno), va a pasadas por defecto
-                if (inv.childName.toLowerCase().includes(lowerSearchTerm)) {
-                    past.push(inv);
-                }
+                // Factura huérfana (sin alumno), va a "pasadas" por defecto
+                past.push(inv);
                 continue;
             }
 
             // ASOCIACIÓN BASADA EN ESTADO DEL ALUMNO
             
             // 1. Alumnos activos este mes -> Pestaña "Actual"
-            // (La petición 1 del usuario)
             if (isStudentActiveThisMonth(student)) {
-                current.push(inv);
+                active.push(inv);
             } 
             // 2. Alumnos con baja anterior a este mes -> Pestaña "Pasadas"
-            // (La petición 2 del usuario)
-            else if (isStudentInactive(student)) {
-                if (inv.childName.toLowerCase().includes(lowerSearchTerm)) {
-                    past.push(inv);
-                }
+            else if (isStudentInactivePast(student)) {
+                past.push(inv);
             } 
-            // 3. Alumnos en "limbo" (baja este mes, o alta futura) -> Pestaña "Pasadas"
+            // 3. Alumnos inactivos por otras razones (alta futura, etc.)
             else {
-                 if (inv.childName.toLowerCase().includes(lowerSearchTerm)) {
-                    past.push(inv);
-                }
+                other.push(inv);
             }
         }
         
-        // Ordenar: "actual" por nombre, "pasadas" por fecha de factura
-        current.sort((a, b) => a.childName.localeCompare(b.childName));
+        // Ordenar
+        active.sort((a, b) => a.childName.localeCompare(b.childName));
         past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); 
+        other.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        return { currentMonthInvoices: current, pastInvoices: past };
-    }, [invoices, searchTerm, students]); // <-- Dependencias actualizadas
-    // --- FIN DE LA MODIFICACIÓN ---
+        return { activeInvoices: active, pastInvoices: past, otherInvoices: other };
+    }, [invoices, students]); // <-- Dependencia actualizada a 'students'
 
 
     const handlePastInvoiceExport = (invoice: Invoice) => {
@@ -116,8 +105,27 @@ const Invoicing = ({
         }
     };
     
-    const listToRender = activeSubTab === 'actual' ? currentMonthInvoices : pastInvoices;
+    // --- CAMBIO: Lógica de filtrado (ahora se aplica a la lista seleccionada) ---
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    let listToRender: Invoice[] = [];
+    let placeholderText = "Buscar por nombre de alumno...";
+
+    switch (activeSubTab) {
+        case 'actual':
+            listToRender = activeInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
+            placeholderText = "Buscar en alumnos activos...";
+            break;
+        case 'pasadas':
+            listToRender = pastInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
+            placeholderText = "Buscar en inactivos (pasados)...";
+            break;
+        case 'otros':
+            listToRender = otherInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
+            placeholderText = "Buscar en inactivos (otros)...";
+            break;
+    }
     const listCount = listToRender.length;
+    // --- FIN DE LA MODIFICACIÓN ---
 
     return (
         <div style={styles.card}>
@@ -126,24 +134,15 @@ const Invoicing = ({
                     Facturación ({listCount})
                 </h3>
                 
-                {activeSubTab === 'pasadas' ? (
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre en facturas pasadas..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
-                    />
-                ) : (
-                    // Filtro de búsqueda para la pestaña "Actual" (alumnos activos)
-                     <input
-                        type="text"
-                        placeholder="Buscar por nombre en facturas actuales..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
-                    />
-                )}
+                {/* --- CAMBIO: Input de búsqueda siempre visible --- */}
+                <input
+                    type="text"
+                    placeholder={placeholderText}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
+                />
+                {/* --- FIN CAMBIO --- */}
 
                 <button 
                     onClick={onExport} 
@@ -153,34 +152,41 @@ const Invoicing = ({
                 </button>
             </div>
 
+            {/* --- CAMBIO: Tres pestañas --- */}
             <div style={styles.subTabContainer}>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('actual'); setSearchTerm(''); }}
                 >
-                    Facturas (Alumnos Activos) ({currentMonthInvoices.length})
+                    Activos ({activeInvoices.length})
                 </button>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'pasadas' ? styles.subTabButtonActive : {})}}
-                    onClick={() => setActiveSubTab('pasadas')}
+                    onClick={() => { setActiveSubTab('pasadas'); setSearchTerm(''); }}
                 >
-                    Facturas (Alumnos Inactivos) ({pastInvoices.length})
+                    Inactivos (Baja pasada) ({pastInvoices.length})
+                </button>
+                <button 
+                    style={{...styles.subTabButton, ...(activeSubTab === 'otros' ? styles.subTabButtonActive : {})}}
+                    onClick={() => { setActiveSubTab('otros'); setSearchTerm(''); }}
+                >
+                    Inactivos (Otros) ({otherInvoices.length})
                 </button>
             </div>
+            {/* --- FIN CAMBIO --- */}
+
 
             <div style={styles.listContainer}>
                 {listToRender.length > 0 ? listToRender.map(inv => (
                     <div key={inv.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{inv.childName}</p>
-                            <p style={styles.listItemInfo}>
-                                Fecha Factura: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
+                            <p style={D( {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
                             </p>
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                             <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>
                             
-                            {/* Permitir exportar PDF desde ambas pestañas */}
                             <button 
                                 onClick={() => handlePastInvoiceExport(inv)} 
                                 style={{...styles.actionButton, backgroundColor: '#17a2b8', padding: '5px 10px'}}
@@ -199,7 +205,6 @@ const Invoicing = ({
                                 <option value="Vencida">Vencida</option>
                             </select>
                             
-                            {/* --- BOTÓN DE BORRAR AÑADIDO --- */}
                             <button 
                                 onClick={() => onDeleteInvoice(inv)} 
                                 style={styles.deleteButton} 
@@ -207,11 +212,10 @@ const Invoicing = ({
                             >
                                 <Trash2 size={14} />
                             </button>
-                            {/* --- FIN BOTÓN DE BORRAR --- */}
 
                         </div>
                     </div>
-                )) : <p>No hay facturas en esta vista.</p>}
+                )) : <p>No hay facturas que coincidan con los filtros.</p>}
             </div>
         </div>
     );
