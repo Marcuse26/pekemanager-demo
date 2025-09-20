@@ -11,11 +11,43 @@ interface AppHistoryViewerProps {
 
 const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
     const [searchTerm, setSearchTerm] = useState('');
+
+    // --- INICIO DE CAMBIO: Lógica de ordenación robusta ---
+
+    // Helper para parsear CUALQUIER formato de fecha (antiguo o nuevo)
+    const parseTimestamp = (timestamp: string): number => {
+        if (!timestamp) return 0;
+        // Formato Nuevo (ISO String): "2025-09-21T01:10:00.123Z"
+        if (timestamp.includes('T') && timestamp.includes('Z')) {
+            return new Date(timestamp).getTime();
+        }
+        // Formato Antiguo (es-ES): "21/9/2025, 1:10:00"
+        if (timestamp.includes('/') && timestamp.includes(',')) {
+            try {
+                const [datePart, timePart] = timestamp.split(', ');
+                const [day, month, year] = datePart.split('/').map(Number);
+                const [hour, minute, second] = timePart.split(':').map(Number);
+                // new Date(año, mes (0-11), dia, hora, min, seg)
+                return new Date(year, month - 1, day, hour, minute, second).getTime();
+            } catch (e) {
+                return 0; // Si falla el parseo, va al final
+            }
+        }
+        // Si es cualquier otra cosa
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            return 0;
+        }
+        return date.getTime();
+    };
+
     const filteredHistory = history.filter(log =>
         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.user.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Esto funciona con ISO strings
+    ).sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp)); // Ordenar usando el helper
+    
+    // --- FIN DE CAMBIO ---
 
     return (
         <div style={styles.card}>
@@ -29,9 +61,7 @@ const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{...styles.formInputSmall, width: '250px'}}
                     />
-                    {/* --- INICIO DE CAMBIO: Texto del botón --- */}
                     <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Historial</button>
-                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </div>
             <div style={styles.listContainer}>
@@ -39,9 +69,8 @@ const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
                     <div key={log.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{log.action}: <span style={{fontWeight: 'normal'}}>{log.details}</span></p>
-                            {/* --- INICIO DE CAMBIO: Formatear fecha ISO --- */}
-                            <p style={styles.listItemInfo}>Realizado por <strong>{log.user}</strong> el {new Date(log.timestamp).toLocaleString('es-ES')}</p>
-                            {/* --- FIN DE CAMBIO --- */}
+                            {/* Formatear fecha usando el mismo parser para asegurar */}
+                            <p style={styles.listItemInfo}>Realizado por <strong>{log.user}</strong> el {log.timestamp ? new Date(parseTimestamp(log.timestamp)).toLocaleString('es-ES') : 'Fecha inválida'}</p>
                         </div>
                     </div>
                 )) : <p>No hay actividad registrada.</p>}
