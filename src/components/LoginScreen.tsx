@@ -8,14 +8,15 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// Contraseñas simplificadas
+// --- INICIO DE CAMBIOS: Contraseñas actualizadas (sin patrón) ---
 const userProfiles = [
-    { id: 'gonzalo', displayName: 'Gonzalo', password: 'gonzalo2025', avatarInitial: 'G' },
-    { id: 'trabajador1', displayName: 'Trabajador 1', password: 'peke1111', avatarInitial: '1' },
-    { id: 'trabajador2', displayName: 'Trabajador 2', password: 'peke2222', avatarInitial: '2' },
-    { id: 'trabajador3', displayName: 'Trabajador 3', password: 'peke3333', avatarInitial: '3' },
-    { id: 'trabajador4', displayName: 'Trabajador 4', password: 'peke4444', avatarInitial: '4' },
+    { id: 'gonzalo', displayName: 'Gonzalo Navarro', password: 'gonzalo9021', avatarInitial: 'G' },
+    { id: 'trabajador1', displayName: 'Laura Villar', password: 'villar3345', avatarInitial: '1' },
+    { id: 'trabajador2', displayName: 'Mercedes Mora', password: 'mora7789', avatarInitial: '2' },
+    { id: 'trabajador3', displayName: 'Laura García', password: 'garcia2201', avatarInitial: '3' },
+    { id: 'trabajador4', displayName: 'Ashley Bugarin', password: 'bugarin4567', avatarInitial: '4' },
 ];
+// --- FIN DE CAMBIOS ---
 
 // Estilo para el texto dentro del avatar
 const avatarTextStyle: React.CSSProperties = {
@@ -60,11 +61,9 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
   const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
 
-  // No hay lógica 2x2, se revierte al original
-
   return (
     <div style={styles.loginContainer}>
-      <div style={styles.loginBox}>
+      <div style={styles.loginBox}> {/* Este style (loginBox) ya se ajustó a 540px en styles.ts */}
         <PekemanagerLogo size={32} />
         
         {!selectedUser ? (
@@ -79,12 +78,12 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                             <div style={styles.userAvatar}>
                                 <span style={avatarTextStyle}>{gonzaloProfile.avatarInitial}</span>
                             </div>
+                            {/* El style userName ya tiene 'whiteSpace: nowrap' de styles.ts */}
                             <span style={styles.userName}>{gonzaloProfile.displayName}</span>
                         </div>
                     )}
 
-                    {/* --- INICIO DE CAMBIO: Vuelta a una sola fila --- */}
-                    {/* Usamos el 'gap: 20px' original, ahora cabe gracias al 'width' del loginBox */}
+                    {/* Fila 2: Todos los trabajadores (en una sola fila) */}
                     <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
                         {workerProfiles.map(profile => ( 
                             <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
@@ -95,7 +94,6 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                             </div>
                         ))}
                     </div>
-                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </>
         ) : (
