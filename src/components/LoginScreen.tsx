@@ -8,12 +8,15 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
+// --- INICIO DE CAMBIOS: Nuevas contraseñas y Trabajador 4 ---
 const userProfiles = [
-    { id: 'gonzalo', displayName: 'Gonzalo', password: 'gonzalo123', avatarInitial: 'G' },
-    { id: 'trabajador1', displayName: 'Trabajador 1', password: 'pass1', avatarInitial: '1' },
-    { id: 'trabajador2', displayName: 'Trabajador 2', password: 'pass2', avatarInitial: '2' },
-    { id: 'trabajador3', displayName: 'Trabajador 3', password: 'pass3', avatarInitial: '3' },
+    { id: 'gonzalo', displayName: 'Gonzalo', password: 'gOnz@2o25', avatarInitial: 'G' },
+    { id: 'trabajador1', displayName: 'Trabajador 1', password: 'pEkeM@n1!', avatarInitial: '1' },
+    { id: 'trabajador2', displayName: 'Trabajador 2', password: 'gu@rd3r1a', avatarInitial: '2' },
+    { id: 'trabajador3', displayName: 'Trabajador 3', password: 'rEcrE@3*', avatarInitial: '3' },
+    { id: 'trabajador4', displayName: 'Trabajador 4', password: 'wOrkEr$4+', avatarInitial: '4' },
 ];
+// --- FIN DE CAMBIOS ---
 
 // Estilo para el texto dentro del avatar (G, 1, 2, 3)
 const avatarTextStyle: React.CSSProperties = {
