@@ -258,7 +258,6 @@ const App = () => {
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
 
-    // --- INICIO DE CAMBIO: Lógica de estado y fechas para exportar ---
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -272,16 +271,14 @@ const App = () => {
         const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
         return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
     }
-    // --- FIN DE CAMBIO ---
 
     switch (dataType) {
         case 'alumnos': 
-            // --- INICIO DE CAMBIO: Ordenar y añadir estado ---
             const sortedChildren = [...children].sort((a, b) => 
                 `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)
             );
              dataToExport = sortedChildren.map(c => ({
-                Estado: isStudentActiveThisMonth(c) ? 'Activo' : 'Inactivo', // Nueva columna
+                Estado: isStudentActiveThisMonth(c) ? 'Activo' : 'Inactivo',
                 Nombre: c.name,
                 Apellidos: c.surname,
                 Fecha_Nacimiento: c.birthDate,
@@ -301,10 +298,12 @@ const App = () => {
                 Titular_Cuenta: c.accountHolderName,
                 NIF_Titular: c.nif
             }));
-            // --- FIN DE CAMBIO ---
             break;
+        
+        // --- INICIO DE CAMBIO: Ordenar Asistencia ---
         case 'asistencia': 
-            dataToExport = attendance.map(a => ({
+            const sortedAttendance = [...attendance].sort((a, b) => b.date.localeCompare(a.date));
+            dataToExport = sortedAttendance.map(a => ({
                 Alumno: a.childName,
                 Fecha: a.date,
                 Hora_Entrada: a.entryTime,
@@ -313,6 +312,8 @@ const App = () => {
                 Recogido_Por: a.pickedUpBy
             }));
             break;
+        // --- FIN DE CAMBIO ---
+
         case 'facturacion': 
             dataToExport = invoices.map(i => ({
                 Factura_ID: i.numericId,
@@ -324,14 +325,19 @@ const App = () => {
                 Estado: i.status
             }));
             break;
+
+        // --- INICIO DE CAMBIO: Ordenar Penalizaciones ---
         case 'penalizaciones': 
-            dataToExport = penalties.map(p => ({
+            const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
+            dataToExport = sortedPenalties.map(p => ({
                 Alumno: p.childName,
                 Fecha: p.date,
                 Importe: p.amount,
                 Motivo: p.reason
             }));
             break;
+        // --- FIN DE CAMBIO ---
+            
         case 'fichajes':
             const sortedLogs = [...staffTimeLogs].sort((a, b) => {
                 const dateCompare = b.date.localeCompare(a.date);
