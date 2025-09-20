@@ -8,16 +8,17 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// (Contraseñas actualizadas y Trabajador 4 añadido)
+// --- INICIO DE CAMBIOS: Contraseñas simplificadas ---
 const userProfiles = [
-    { id: 'gonzalo', displayName: 'Gonzalo', password: 'gOnz@2o25', avatarInitial: 'G' },
-    { id: 'trabajador1', displayName: 'Trabajador 1', password: 'pEkeM@n1!', avatarInitial: '1' },
-    { id: 'trabajador2', displayName: 'Trabajador 2', password: 'gu@rd3r1a', avatarInitial: '2' },
-    { id: 'trabajador3', displayName: 'Trabajador 3', password: 'rEcrE@3*', avatarInitial: '3' },
-    { id: 'trabajador4', displayName: 'Trabajador 4', password: 'wOrkEr$4+', avatarInitial: '4' },
+    { id: 'gonzalo', displayName: 'Gonzalo', password: 'gonzalo2025', avatarInitial: 'G' },
+    { id: 'trabajador1', displayName: 'Trabajador 1', password: 'peke1111', avatarInitial: '1' },
+    { id: 'trabajador2', displayName: 'Trabajador 2', password: 'peke2222', avatarInitial: '2' },
+    { id: 'trabajador3', displayName: 'Trabajador 3', password: 'peke3333', avatarInitial: '3' },
+    { id: 'trabajador4', displayName: 'Trabajador 4', password: 'peke4444', avatarInitial: '4' },
 ];
+// --- FIN DE CAMBIOS ---
 
-// Estilo para el texto dentro del avatar (G, 1, 2, 3, 4)
+// Estilo para el texto dentro del avatar
 const avatarTextStyle: React.CSSProperties = {
     fontSize: '32px',
     fontWeight: 'bold',
@@ -60,6 +61,11 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
   const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
 
+  // --- INICIO DE CAMBIO: Lógica para rejilla 2x2 ---
+  const row1Workers = workerProfiles.slice(0, 2); // Trabajador 1, 2
+  const row2Workers = workerProfiles.slice(2, 4); // Trabajador 3, 4
+  // --- FIN DE CAMBIO ---
+
   return (
     <div style={styles.loginContainer}>
       <div style={styles.loginBox}>
@@ -71,6 +77,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                 
                 <div style={{...styles.userSelectionContainer, flexDirection: 'column', alignItems: 'center'}}>
                     
+                    {/* Fila 1: Gonzalo */}
                     {gonzaloProfile && (
                         <div key={gonzaloProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(gonzaloProfile.id)}>
                             <div style={styles.userAvatar}>
@@ -80,10 +87,10 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                         </div>
                     )}
 
-                    {/* --- INICIO DE CAMBIO: gap de 20px a 5px --- */}
-                    <div style={{display: 'flex', justifyContent: 'center', gap: '5px', flexWrap: 'wrap'}}>
-                    {/* --- FIN DE CAMBIO --- */}
-                        {workerProfiles.map(profile => ( 
+                    {/* --- INICIO DE CAMBIO: Layout 2x2 --- */}
+                    {/* Fila 2: Trabajador 1 y 2 */}
+                    <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
+                        {row1Workers.map(profile => ( 
                             <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
                                 <div style={styles.userAvatar}>
                                     <span style={avatarTextStyle}>{profile.avatarInitial}</span>
@@ -92,7 +99,18 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                             </div>
                         ))}
                     </div>
-
+                    {/* Fila 3: Trabajador 3 y 4 */}
+                    <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginTop: '20px'}}>
+                        {row2Workers.map(profile => ( 
+                            <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
+                                <div style={styles.userAvatar}>
+                                    <span style={avatarTextStyle}>{profile.avatarInitial}</span>
+                                </div>
+                                <span style={styles.userName}>{profile.displayName}</span>
+                            </div>
+                        ))}
+                    </div>
+                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </>
         ) : (
@@ -101,7 +119,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                     <div style={styles.userAvatar}>
                         <span style={avatarTextStyle}>{selectedProfile?.avatarInitial}</span>
                     </div>
-                    <span style={styles.userName}>{selectedProfile?.displayName}</span>
+                    <span style_={styles.userName}>{selectedProfile?.displayName}</span>
                 </div>
                 <form onSubmit={handleLogin} style={{width: '80%'}}>
                     <input 

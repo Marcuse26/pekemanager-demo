@@ -10,18 +10,18 @@ export const styles: { [key: string]: React.CSSProperties } = {
   loginError: { color: '#dc3545', marginBottom: '15px', fontSize: '14px' },
   userSelectionContainer: { display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginTop: '20px', },
   
-  // --- INICIO DE CAMBIO: Layout Login ---
   userProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s', width: '100px', boxSizing: 'border-box' },
-  // --- FIN DE CAMBIO ---
   
   userAvatar: { width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#495057', marginBottom: '8px', },
-  userName: { fontSize: '14px', fontWeight: '500', color: '#343a40', },
+  
+  // --- INICIO DE CAMBIO: Evitar salto de línea en nombres ---
+  userName: { fontSize: '14px', fontWeight: '500', color: '#343a40', whiteSpace: 'nowrap' },
+  // --- FIN DE CAMBIO ---
+  
   selectedUserProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', },
   switchUserButton: { background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '14px', marginTop: '15px', padding: '5px', },
   
-  // --- INICIO DE CORRECCIÓN SCROLL (100vh -> 100%) ---
   appContainer: { display: 'flex', height: '100%', backgroundColor: '#f8f9fa', fontFamily: 'system-ui, sans-serif' },
-  // --- FIN DE CORRECCIÓN SCROLL ---
   
   sidebar: { width: '260px', backgroundColor: '#ffffff', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '1px solid #e9ecef' },
   sidebarTitle: { fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', color: '#6c757d', padding: '0 15px', marginBottom: '10px', fontWeight: '600' },
@@ -30,7 +30,6 @@ export const styles: { [key: string]: React.CSSProperties } = {
   currentUserInfo: { padding: '10px 15px', fontSize: '14px', color: '#495057', textAlign: 'center', borderTop: '1px solid #e9ecef', marginTop: '10px' },
   sidebarFooter: { padding: '15px', fontSize: '12px', color: '#6c757d', textAlign: 'center', borderTop: '1px solid #e9ecef', marginTop: '10px' },
   
-  // --- INICIO CORRECCIÓN ESTILO BOTÓN LOGOUT (para el header) ---
   logoutButton: { 
     padding: '10px 15px', 
     border: 'none', 
@@ -44,7 +43,6 @@ export const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: '500', 
     transition: 'background-color 0.2s' 
   },
-  // --- FIN CORRECCIÓN ESTILO BOTÓN LOGOUT ---
 
   mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
   header: { padding: '20px 30px', borderBottom: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', flexShrink: 0 },
@@ -55,8 +53,7 @@ export const styles: { [key: string]: React.CSSProperties } = {
   card: { backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' },
   cardTitle: { marginTop: 0, marginBottom: '20px', fontSize: '20px', color: '#343a40', fontWeight: '600' },
   
-  // --- MODIFICADO ---
-  listContainer: { height: 'calc(100vh - 350px)', overflowY: 'auto' }, // Altura fija
+  listContainer: { height: 'calc(100vh - 350px)', overflowY: 'auto' },
   
   listContainerSmall: { maxHeight: '150px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '10px' },
   listItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 5px', borderBottom: '1px solid #f1f3f5' },
@@ -65,7 +62,6 @@ export const styles: { [key: string]: React.CSSProperties } = {
   pillSuccess: { backgroundColor: 'rgba(40, 167, 69, 0.1)', color: '#155724', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
   pillWarning: { backgroundColor: 'rgba(255, 193, 7, 0.1)', color: '#856404', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
   
-  // --- AÑADIDO ---
   pillInactive: { backgroundColor: 'rgba(108, 117, 125, 0.1)', color: '#343a40', padding: '5px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' },
 
   pillInfo: { backgroundColor: 'rgba(0, 123, 255, 0.1)', color: '#004085', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', border: 'none', cursor: 'pointer' },
@@ -144,6 +140,6 @@ export const styles: { [key: string]: React.CSSProperties } = {
     subTabButtonActive: {
         color: '#007bff',
         borderBottom: '2px solid #007bff',
-        fontWeight: '601',
+        fontWeight: '600',
     },
 };
