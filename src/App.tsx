@@ -1,7 +1,7 @@
 // Contenido para: src/App.tsx
 
 // --- Importaciones de React y Librerías ---
-import { useState, useEffect, useCallback } from 'react'; // 'useCallback' AÑADIDO
+import { useState, useEffect, useCallback } from 'react';
 import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 // @ts-ignore
@@ -122,7 +122,7 @@ const App = () => {
     
     return () => unsubscribers.forEach(unsub => unsub());
 
-  }, [userId]); // <- La dependencia appId se elimina de aquí, ya que es constante
+  }, [userId]);
 
   useEffect(() => {
       if(selectedChild) {
@@ -140,9 +140,6 @@ const App = () => {
   
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
   
-  // --- INICIO DE MODIFICACIÓN: Facturación Automática ---
-
-  // 1. La función addAppHistoryLog la envolvemos en useCallback
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
@@ -157,11 +154,9 @@ const App = () => {
     } catch (error) {
         console.error("Error logging history:", error);
     }
-  }, [userId, appId]); // Dependencias de la función
+  }, [userId, appId]);
 
-  // 2. useEffect para la facturación automática
   useEffect(() => {
-    // No ejecutar si los datos principales no están listos
     if (isLoading || !userId || children.length === 0) return;
 
     const month = new Date().getMonth();
@@ -170,9 +165,8 @@ const App = () => {
     const runSilentInvoiceUpdate = async () => {
         for (const child of children) {
             const schedule = schedules.find(s => s.id === child.schedule);
-            if (!schedule) continue; // Si no tiene horario, no se puede facturar
+            if (!schedule) continue;
 
-            // Filtra penalizaciones del mes actual para este niño
             const childPenalties = penalties.filter(p => 
                 p.childId === child.numericId && 
                 new Date(p.date).getMonth() === month && 
@@ -183,15 +177,13 @@ const App = () => {
             let totalAmount = schedule.price + totalPenalties;
             let enrollmentFeeApplied = false;
             
-            // Añade matrícula si no está pagada
             if (!child.enrollmentPaid) { 
                 totalAmount += 100;
                 enrollmentFeeApplied = true;
             }
             
-            // Prepara los datos de la factura
             const invoiceData: Omit<Invoice, 'id' | 'status'> = {
-                numericId: Date.now() + child.numericId, // Esto se sobrescribirá si ya existe
+                numericId: Date.now() + child.numericId,
                 childId: child.numericId,
                 childName: `${child.name} ${child.surname}`,
                 date: new Date().toISOString().split('T')[0],
@@ -210,21 +202,18 @@ const App = () => {
             
             try {
                 if (existingInvoice) {
-                    // Si ya existe, solo actualizamos si hay cambios
                     if (existingInvoice.amount !== invoiceData.amount || 
                         existingInvoice.base !== invoiceData.base || 
                         existingInvoice.penalties !== invoiceData.penalties ||
                         existingInvoice.enrollmentFeeIncluded !== invoiceData.enrollmentFeeIncluded
                     ) {
-                        // Mantenemos el estado ('Pagada', 'Vencida') que ya tuviera
                         await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
                             ...invoiceData,
-                            numericId: existingInvoice.numericId, // Mantenemos el ID numérico original
-                            status: existingInvoice.status, // Mantenemos el estado actual
+                            numericId: existingInvoice.numericId,
+                            status: existingInvoice.status,
                         });
                     }
                 } else {
-                    // Si no existe, la creamos como 'Pendiente'
                     await addDoc(collection(db, invoicesCollectionPath), {
                         ...invoiceData,
                         status: 'Pendiente' as Invoice['status'],
@@ -238,11 +227,7 @@ const App = () => {
 
     runSilentInvoiceUpdate();
 
-  // Se ejecuta si cambian los alumnos, penalizaciones, config (tarifa), o las propias facturas (para saber si existen)
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
-  
-  // --- FIN DE MODIFICACIÓN ---
-
 
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
@@ -299,11 +284,10 @@ const App = () => {
             }));
             break;
         case 'fichajes':
-            // --- INICIO CORRECCIÓN ORDEN CSV (DESCENDENTE) ---
             const sortedLogs = [...staffTimeLogs].sort((a, b) => {
-                const dateCompare = b.date.localeCompare(a.date); // <-- 'b' primero para orden descendente
+                const dateCompare = b.date.localeCompare(a.date);
                 if (dateCompare !== 0) return dateCompare; 
-                return (b.checkIn || '').localeCompare(a.checkIn || ''); // <-- 'b' primero
+                return (b.checkIn || '').localeCompare(a.checkIn || '');
             });
              dataToExport = sortedLogs.map(log => ({
                 Usuario: log.userName,
@@ -311,7 +295,6 @@ const App = () => {
                 Entrada: log.checkIn,
                 Salida: log.checkOut
             }));
-            // --- FIN CORRECCIÓN ORDEN CSV ---
             break;
         case 'historial': 
             dataToExport = appHistory.map(h => ({
@@ -344,14 +327,14 @@ const App = () => {
     setIsLoggedIn(true);
     setCurrentUser(username);
     addAppHistoryLog(username, 'Inicio de Sesión', `El usuario ${username} ha iniciado sesión.`);
-    setActiveTab('dashboard'); // <-- Bug Pestaña: Resetea la pestaña al iniciar sesión
+    setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
     addAppHistoryLog(currentUser, 'Cierre de Sesión', `El usuario ${currentUser} ha cerrado sesión.`);
     setIsLoggedIn(false);
     setCurrentUser('invitado');
-    setActiveTab('dashboard'); // Resetea también al salir (buena práctica)
+    setActiveTab('dashboard');
   };
 
   const handleAddChild = async (e: React.FormEvent) => {
@@ -499,8 +482,6 @@ const App = () => {
     }
   };
 
-  // --- La función manual 'generateInvoices' se ha eliminado ---
-
     const handleUpdateInvoiceStatus = async (invoiceId: string, newStatus: Invoice['status']) => {
         if (!userId) return;
         try {
@@ -550,11 +531,9 @@ const App = () => {
         }
     };
     
-    // --- FUNCIONES DE FICHAJE (CORREGIDAS CON FECHA LOCAL) ---
     const handleStaffCheckIn = async () => {
         if (!userId || !currentUser) return;
         
-        // --- CORRECCIÓN DE FECHA (ZONA HORARIA) ---
         const today = new Date(); 
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0'); 
@@ -584,7 +563,6 @@ const App = () => {
     const handleStaffCheckOut = async () => {
         if (!userId || !currentUser) return;
 
-        // --- CORRECCIÓN DE FECHA (ZONA HORARIA) ---
         const today = new Date();
         const year = today.getFullYear();
         const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -624,7 +602,6 @@ const App = () => {
         }
     };
 
-  // --- Lógica de Generación de PDF ---
   const handleGenerateAndExportInvoice = async (student: Student) => {
         const month = new Date().getMonth();
         const year = new Date().getFullYear();
@@ -747,7 +724,6 @@ const App = () => {
   const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayStr_LOCAL && log.checkIn && !log.checkOut);
   const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
 
-  // Función para renderizar la pestaña activa
   const renderTabContent = () => {
       switch(activeTab) {
           case 'dashboard':
@@ -761,8 +737,14 @@ const App = () => {
           case 'calendario':
               return <CalendarView attendance={attendance} />;
           case 'facturacion':
-              // La prop 'onGenerate' se ha ELIMINADO de aquí
-              return <Invoicing invoices={invoices} onUpdateStatus={handleUpdateInvoiceStatus} config={config} onExport={() => handleExport('facturacion')} />;
+              return <Invoicing 
+                  invoices={invoices} 
+                  onUpdateStatus={handleUpdateInvoiceStatus} 
+                  config={config} 
+                  onExport={() => handleExport('facturacion')} 
+                  students={children}
+                  onGeneratePastInvoice={handleGeneratePDFInvoice}
+              />;
           case 'penalizaciones':
               return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
           case 'control':
@@ -777,8 +759,6 @@ const App = () => {
               return <Dashboard students={children} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
       }
   }
-
-  // --- HTML Principal ---
 
   if (isLoading) return <LoadingSpinner />;
   if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
@@ -862,7 +842,6 @@ const App = () => {
             )}
 
           </div>
-          {/* Botón de Logout movido al header */}
           <div>
             <div style={styles.currentUserInfo}>
               <p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p>
@@ -878,7 +857,6 @@ const App = () => {
         <main style={styles.mainContent}>
           <header style={styles.header}>
             <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-             {/* Botón de Logout AÑADIDO AQUÍ */}
              <button onClick={handleLogout} style={styles.logoutButton}>
                 <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión
              </button>
