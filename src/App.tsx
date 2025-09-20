@@ -255,7 +255,6 @@ const App = () => {
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
   // --- FIN DE CORRECCIÓN ---
 
-
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
     switch (dataType) {
@@ -898,3 +897,4 @@ const App = () => {
 };
 
 export default App;
+
