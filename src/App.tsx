@@ -147,7 +147,7 @@ const App = () => {
   
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
   
-  // --- INICIO DE CAMBIO: Guardar timestamp como ISO string ---
+  // Guardar timestamp como ISO string para que se pueda ordenar
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
@@ -156,7 +156,6 @@ const App = () => {
         details,
         timestamp: new Date().toISOString(), // Guardar como ISO
     };
-  // --- FIN DE CAMBIO ---
     try {
         const historyCollectionPath = `/artifacts/${appId}/public/data/appHistory`;
         await addDoc(collection(db, historyCollectionPath), newLog);
@@ -368,11 +367,38 @@ const App = () => {
             }));
             break;
             
-        // --- INICIO DE CAMBIO: Ordenar Historial ---
-        case 'historial': 
-            const sortedHistory = [...appHistory].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        // --- INICIO DE CAMBIO: Ordenar Historial (con parseo de fechas) ---
+        case 'historial':
+            // Helper para parsear CUALQUIER formato de fecha (antiguo o nuevo)
+            const parseTimestamp = (timestamp: string): number => {
+                if (!timestamp) return 0;
+                // Formato Nuevo (ISO String): "2025-09-21T01:10:00.123Z"
+                if (timestamp.includes('T') && timestamp.includes('Z')) {
+                    return new Date(timestamp).getTime();
+                }
+                // Formato Antiguo (es-ES): "21/9/2025, 1:10:00"
+                if (timestamp.includes('/') && timestamp.includes(',')) {
+                    try {
+                        const [datePart, timePart] = timestamp.split(', ');
+                        const [day, month, year] = datePart.split('/').map(Number);
+                        const [hour, minute, second] = timePart.split(':').map(Number);
+                        // new Date(año, mes (0-11), dia, hora, min, seg)
+                        return new Date(year, month - 1, day, hour, minute, second).getTime();
+                    } catch (e) {
+                        return 0; // Si falla el parseo, va al final
+                    }
+                }
+                // Si es cualquier otra cosa
+                return new Date(timestamp).getTime();
+            };
+
+            const sortedHistory = [...appHistory].sort((a, b) => 
+                parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp)
+            );
+            
             dataToExport = sortedHistory.map(h => ({
-                Fecha: new Date(h.timestamp).toLocaleString('es-ES'), // Formatear
+                // Usamos el parser para asegurar que se formatea bien
+                Fecha: h.timestamp ? new Date(parseTimestamp(h.timestamp)).toLocaleString('es-ES') : 'N/A',
                 Usuario: h.user,
                 Accion: h.action,
                 Detalles: h.details
@@ -488,7 +514,9 @@ const App = () => {
             const newLog: HistoryLog = {
                 id: `hist_${Date.now()}`,
                 user: user,
+                // --- INICIO DE CAMBIO: Guardar timestamp como locale string ---
                 timestamp: new Date().toLocaleString('es-ES'),
+                // --- FIN DE CAMBIO ---
                 changes: changesDescription,
             };
             finalUpdateData.modificationHistory = [...(originalStudent.modificationHistory || []), newLog];
