@@ -3,7 +3,9 @@ import type React from 'react';
 
 export const styles: { [key: string]: React.CSSProperties } = {
   loginContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f2f5', fontFamily: 'system-ui, sans-serif' },
-  loginBox: { padding: '40px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1)', textAlign: 'center', width: '420px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  // --- INICIO DE CAMBIO: Ancho de la caja aumentado ---
+  loginBox: { padding: '40px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1)', textAlign: 'center', width: '540px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  // --- FIN DE CAMBIO ---
   loginSubtitle: { margin: '10px 0 25px 0', fontSize: '16px', color: '#666' },
   loginInput: { width: '100%', boxSizing: 'border-box', padding: '12px 10px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' },
   loginButton: { width: '100%', padding: '12px', border: 'none', borderRadius: '6px', backgroundColor: '#007bff', color: 'white', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'background-color 0.2s' },
@@ -14,9 +16,7 @@ export const styles: { [key: string]: React.CSSProperties } = {
   
   userAvatar: { width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#495057', marginBottom: '8px', },
   
-  // --- INICIO DE CAMBIO: Evitar salto de línea en nombres ---
-  userName: { fontSize: '14px', fontWeight: '500', color: '#343a40', whiteSpace: 'nowrap' },
-  // --- FIN DE CAMBIO ---
+  userName: { fontSize: '14px', fontWeight: '500', color: '#343a40', whiteSpace: 'nowrap' }, // Mantenemos este cambio
   
   selectedUserProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', },
   switchUserButton: { background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', fontSize: '14px', marginTop: '15px', padding: '5px', },
@@ -87,7 +87,7 @@ export const styles: { [key: string]: React.CSSProperties } = {
   dayCount: { display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '10px', fontSize: '16px', color: '#343a40', fontWeight: '600' },
   eventsContainer: { marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '4px' },
   eventPill: { padding: '3px 6px', borderRadius: '4px', fontSize: '11px', backgroundColor: '#e9f3ff', color: '#004085', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  penaltyPill: { padding: '3px 6px', borderRadius: '4px', fontSize: '11px', backgroundColor: '#fff3cd', color: '#856404', marginTop: '4px', display: 'flex', alignItems: 'center' },
+  penaltyPill: { padding: '3rd 6px', borderRadius: '4px', fontSize: '11px', backgroundColor: '#fff3cd', color: '#856404', marginTop: '4px', display: 'flex', alignItems: 'center' },
   attendancePill: { padding: '3px 6px', borderRadius: '4px', fontSize: '11px', backgroundColor: '#e9f3ff', color: '#004085' },
   attendanceItem: { padding: '15px 5px', borderBottom: '1px solid #f1f3f5' },
   attendanceGrid: { display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1.5fr auto', gap: '10px', alignItems: 'center', marginTop: '10px' },

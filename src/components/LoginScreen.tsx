@@ -8,7 +8,7 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// Contraseñas simplificadas y Trabajador 4 añadido
+// Contraseñas simplificadas
 const userProfiles = [
     { id: 'gonzalo', displayName: 'Gonzalo', password: 'gonzalo2025', avatarInitial: 'G' },
     { id: 'trabajador1', displayName: 'Trabajador 1', password: 'peke1111', avatarInitial: '1' },
@@ -60,9 +60,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
   const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
 
-  // Lógica para rejilla 2x2
-  const row1Workers = workerProfiles.slice(0, 2); // Trabajador 1, 2
-  const row2Workers = workerProfiles.slice(2, 4); // Trabajador 3, 4
+  // No hay lógica 2x2, se revierte al original
 
   return (
     <div style={styles.loginContainer}>
@@ -85,9 +83,10 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                         </div>
                     )}
 
-                    {/* Fila 2: Trabajador 1 y 2 */}
+                    {/* --- INICIO DE CAMBIO: Vuelta a una sola fila --- */}
+                    {/* Usamos el 'gap: 20px' original, ahora cabe gracias al 'width' del loginBox */}
                     <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
-                        {row1Workers.map(profile => ( 
+                        {workerProfiles.map(profile => ( 
                             <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
                                 <div style={styles.userAvatar}>
                                     <span style={avatarTextStyle}>{profile.avatarInitial}</span>
@@ -96,17 +95,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                             </div>
                         ))}
                     </div>
-                    {/* Fila 3: Trabajador 3 y 4 */}
-                    <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginTop: '20px'}}>
-                        {row2Workers.map(profile => ( 
-                            <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
-                                <div style={styles.userAvatar}>
-                                    <span style={avatarTextStyle}>{profile.avatarInitial}</span>
-                                </div>
-                                <span style={styles.userName}>{profile.displayName}</span>
-                            </div>
-                        ))}
-                    </div>
+                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </>
         ) : (
@@ -115,9 +104,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                     <div style={styles.userAvatar}>
                         <span style={avatarTextStyle}>{selectedProfile?.avatarInitial}</span>
                     </div>
-                    {/* --- INICIO DE CORRECCIÓN: 'style_' cambiado a 'style' --- */}
                     <span style={styles.userName}>{selectedProfile?.displayName}</span>
-                    {/* --- FIN DE CORRECCIÓN --- */}
                 </div>
                 <form onSubmit={handleLogin} style={{width: '80%'}}>
                     <input 
