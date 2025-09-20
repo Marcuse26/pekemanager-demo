@@ -51,14 +51,13 @@ import Settings from './components/tabs/Settings';
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN (EL "SHELL" O CONTENEDOR) ---
 const App = () => {
   
-  // --- INICIO DE CAMBIO: Login Persistente ---
+  // --- Login Persistente ---
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return sessionStorage.getItem('isLoggedIn') === 'true';
   });
   const [currentUser, setCurrentUser] = useState<string>(() => {
     return sessionStorage.getItem('currentUser') || 'invitado';
   });
-  // --- FIN DE CAMBIO ---
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedChild, setSelectedChild] = useState<Student | null>(null);
@@ -164,14 +163,13 @@ const App = () => {
     }
   }, [userId, appId]);
 
-  // --- Lógica de Facturación Automática (CORREGIDA) ---
+  // --- Lógica de Facturación Automática ---
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
     const month = new Date().getMonth();
     const year = new Date().getFullYear();
 
-    // Lógica de actividad
     const firstDayThisMonth = new Date(year, month, 1);
     const lastDayThisMonth = new Date(year, month + 1, 0);
 
@@ -187,12 +185,9 @@ const App = () => {
     const runSilentInvoiceUpdate = async () => {
         for (const child of children) {
 
-            // --- ¡LA CORRECCIÓN CLAVE! ---
-            // Si el alumno NO está activo este mes, no debe tener factura de este mes.
             if (!isStudentActiveThisMonth(child)) {
-                continue; // Saltamos al siguiente niño
+                continue; 
             }
-            // --- FIN DE LA CORRECCIÓN ---
 
             const schedule = schedules.find(s => s.id === child.schedule);
             if (!schedule) continue;
@@ -262,9 +257,31 @@ const App = () => {
 
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
+
+    // --- INICIO DE CAMBIO: Lógica de estado y fechas para exportar ---
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const isStudentActiveThisMonth = (student: Student): boolean => {
+        if (!student.startMonth) return false;
+        const startDate = new Date(student.startMonth);
+        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+        const startsBeforeOrDuringMonth = startDate <= lastDayThisMonth;
+        const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
+        return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
+    }
+    // --- FIN DE CAMBIO ---
+
     switch (dataType) {
         case 'alumnos': 
-             dataToExport = children.map(c => ({
+            // --- INICIO DE CAMBIO: Ordenar y añadir estado ---
+            const sortedChildren = [...children].sort((a, b) => 
+                `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)
+            );
+             dataToExport = sortedChildren.map(c => ({
+                Estado: isStudentActiveThisMonth(c) ? 'Activo' : 'Inactivo', // Nueva columna
                 Nombre: c.name,
                 Apellidos: c.surname,
                 Fecha_Nacimiento: c.birthDate,
@@ -284,6 +301,7 @@ const App = () => {
                 Titular_Cuenta: c.accountHolderName,
                 NIF_Titular: c.nif
             }));
+            // --- FIN DE CAMBIO ---
             break;
         case 'asistencia': 
             dataToExport = attendance.map(a => ({
@@ -354,7 +372,7 @@ const App = () => {
     }
   };
 
-  // --- INICIO DE CAMBIO: Login Persistente ---
+  // --- Login Persistente ---
   const handleLogin = (username: string) => {
     setIsLoggedIn(true);
     setCurrentUser(username);
@@ -372,7 +390,7 @@ const App = () => {
     sessionStorage.removeItem('currentUser');
     setActiveTab('dashboard');
   };
-  // --- FIN DE CAMBIO ---
+  // --- Fin Login ---
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -719,7 +737,7 @@ const App = () => {
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
-        doc.setTextColor('#c55a32');
+        doc.setTextColor('#c55a33');
         doc.text("mi pequeño recreo", 105, 22, { align: 'center' });
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(10);
@@ -774,11 +792,11 @@ const App = () => {
 
 
   // --- RENDERIZADO PRINCIPAL (EL SHELL) ---
-  const today = new Date();
-  const year = today.getFullYear();
-  const monthStr = String(today.getMonth() + 1).padStart(2, '0');
-  const dayStr = String(today.getDate()).padStart(2, '0');
-  const todayStr_LOCAL = `${year}-${monthStr}-${dayStr}`;
+  const todayForLog = new Date();
+  const yearForLog = todayForLog.getFullYear();
+  const monthStrForLog = String(todayForLog.getMonth() + 1).padStart(2, '0');
+  const dayStrForLog = String(todayForLog.getDate()).padStart(2, '0');
+  const todayStr_LOCAL = `${yearForLog}-${monthStrForLog}-${dayStrForLog}`;
 
   const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayStr_LOCAL && log.checkIn && !log.checkOut);
   const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
