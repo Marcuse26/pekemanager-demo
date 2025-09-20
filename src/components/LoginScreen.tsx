@@ -8,13 +8,14 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// --- INICIO DE CAMBIOS: Contraseñas actualizadas (sin patrón) ---
+// --- INICIO DE CAMBIOS: 'id' ahora coincide con 'displayName' ---
+// Las contraseñas son las últimas que generamos
 const userProfiles = [
-    { id: 'gonzalo', displayName: 'Gonzalo Navarro', password: 'gonzalo9021', avatarInitial: 'G' },
-    { id: 'trabajador1', displayName: 'Laura Villar', password: 'villar3345', avatarInitial: '1' },
-    { id: 'trabajador2', displayName: 'Mercedes Mora', password: 'mora7789', avatarInitial: '2' },
-    { id: 'trabajador3', displayName: 'Laura García', password: 'garcia2201', avatarInitial: '3' },
-    { id: 'trabajador4', displayName: 'Ashley Bugarin', password: 'bugarin4567', avatarInitial: '4' },
+    { id: 'Gonzalo Navarro', displayName: 'Gonzalo Navarro', password: 'gonzalo9021', avatarInitial: 'G' },
+    { id: 'Laura Villar', displayName: 'Laura Villar', password: 'villar3345', avatarInitial: '1' },
+    { id: 'Mercedes Mora', displayName: 'Mercedes Mora', password: 'mora7789', avatarInitial: '2' },
+    { id: 'Laura García', displayName: 'Laura García', password: 'garcia2201', avatarInitial: '3' },
+    { id: 'Ashley Bugarin', displayName: 'Ashley Bugarin', password: 'bugarin4567', avatarInitial: '4' },
 ];
 // --- FIN DE CAMBIOS ---
 
@@ -35,11 +36,13 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
     e.preventDefault();
     if (!selectedUser) return;
 
+    // La lógica de login sigue funcionando, pero ahora 'selectedUser'
+    // es el nombre completo (ej: "Laura Villar")
     const userProfile = userProfiles.find(p => p.id === selectedUser);
     const expectedPassword = userProfile?.password;
 
     if (expectedPassword && password === expectedPassword) {
-      onLogin(selectedUser); 
+      onLogin(selectedUser); // <-- Ahora pasa "Laura Villar" a App.tsx
     } else {
       setError('Contraseña incorrecta');
       setPassword('');
@@ -47,6 +50,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   };
 
   const handleUserSelect = (userId: string) => { 
+      // userId ahora es el nombre completo, ej: "Laura Villar"
       setSelectedUser(userId);
       setError('');
   };
@@ -58,12 +62,12 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   };
 
   const selectedProfile = userProfiles.find(p => p.id === selectedUser);
-  const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
-  const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
+  const gonzaloProfile = userProfiles.find(p => p.id === 'Gonzalo Navarro');
+  const workerProfiles = userProfiles.filter(p => p.id !== 'Gonzalo Navarro');
 
   return (
     <div style={styles.loginContainer}>
-      <div style={styles.loginBox}> {/* Este style (loginBox) ya se ajustó a 540px en styles.ts */}
+      <div style={styles.loginBox}> {/* Ancho de 540px (de styles.ts) */}
         <PekemanagerLogo size={32} />
         
         {!selectedUser ? (
@@ -74,11 +78,11 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                     
                     {/* Fila 1: Gonzalo */}
                     {gonzaloProfile && (
+                        // handleUserSelect ahora usa el ID, que es el nombre completo
                         <div key={gonzaloProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(gonzaloProfile.id)}>
                             <div style={styles.userAvatar}>
                                 <span style={avatarTextStyle}>{gonzaloProfile.avatarInitial}</span>
                             </div>
-                            {/* El style userName ya tiene 'whiteSpace: nowrap' de styles.ts */}
                             <span style={styles.userName}>{gonzaloProfile.displayName}</span>
                         </div>
                     )}
