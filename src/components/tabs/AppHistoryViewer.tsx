@@ -15,7 +15,7 @@ const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.user.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Esto funciona con ISO strings
 
     return (
         <div style={styles.card}>
@@ -29,7 +29,9 @@ const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{...styles.formInputSmall, width: '250px'}}
                     />
-                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar</button>
+                    {/* --- INICIO DE CAMBIO: Texto del botón --- */}
+                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Historial</button>
+                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </div>
             <div style={styles.listContainer}>
@@ -37,7 +39,9 @@ const AppHistoryViewer = ({ history, onExport }: AppHistoryViewerProps) => {
                     <div key={log.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{log.action}: <span style={{fontWeight: 'normal'}}>{log.details}</span></p>
-                            <p style={styles.listItemInfo}>Realizado por <strong>{log.user}</strong> el {log.timestamp}</p>
+                            {/* --- INICIO DE CAMBIO: Formatear fecha ISO --- */}
+                            <p style={styles.listItemInfo}>Realizado por <strong>{log.user}</strong> el {new Date(log.timestamp).toLocaleString('es-ES')}</p>
+                            {/* --- FIN DE CAMBIO --- */}
                         </div>
                     </div>
                 )) : <p>No hay actividad registrada.</p>}

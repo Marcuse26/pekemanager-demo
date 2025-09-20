@@ -8,8 +8,8 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// --- INICIO DE CAMBIOS: 'id' ahora coincide con 'displayName' ---
-// Las contraseñas son las últimas que generamos
+// --- INICIO DE CAMBIOS: Lista final de usuarios ---
+// Ya no existen 'trabajador1', 'trabajador2', etc.
 const userProfiles = [
     { id: 'Gonzalo Navarro', displayName: 'Gonzalo Navarro', password: 'gonzalo9021', avatarInitial: 'G' },
     { id: 'Laura Villar', displayName: 'Laura Villar', password: 'villar3345', avatarInitial: '1' },
@@ -36,13 +36,11 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
     e.preventDefault();
     if (!selectedUser) return;
 
-    // La lógica de login sigue funcionando, pero ahora 'selectedUser'
-    // es el nombre completo (ej: "Laura Villar")
     const userProfile = userProfiles.find(p => p.id === selectedUser);
     const expectedPassword = userProfile?.password;
 
     if (expectedPassword && password === expectedPassword) {
-      onLogin(selectedUser); // <-- Ahora pasa "Laura Villar" a App.tsx
+      onLogin(selectedUser); 
     } else {
       setError('Contraseña incorrecta');
       setPassword('');
@@ -50,7 +48,6 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   };
 
   const handleUserSelect = (userId: string) => { 
-      // userId ahora es el nombre completo, ej: "Laura Villar"
       setSelectedUser(userId);
       setError('');
   };
@@ -78,7 +75,6 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                     
                     {/* Fila 1: Gonzalo */}
                     {gonzaloProfile && (
-                        // handleUserSelect ahora usa el ID, que es el nombre completo
                         <div key={gonzaloProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(gonzaloProfile.id)}>
                             <div style={styles.userAvatar}>
                                 <span style={avatarTextStyle}>{gonzaloProfile.avatarInitial}</span>

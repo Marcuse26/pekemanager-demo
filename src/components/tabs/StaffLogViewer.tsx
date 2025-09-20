@@ -61,7 +61,9 @@ const StaffLogViewer = ({ logs, onExport, staffUsers, onUpdateStaffTimeLog }: St
                         onChange={(e) => setFilterDate(e.target.value)} 
                         style={styles.formInputSmall} 
                     />
-                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar</button>
+                    {/* --- INICIO DE CAMBIO: Texto del botón --- */}
+                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Personal</button>
+                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </div>
             <div style={styles.listContainer}>

@@ -147,14 +147,16 @@ const App = () => {
   
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
   
+  // --- INICIO DE CAMBIO: Guardar timestamp como ISO string ---
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
         user,
         action,
         details,
-        timestamp: new Date().toLocaleString('es-ES'),
+        timestamp: new Date().toISOString(), // Guardar como ISO
     };
+  // --- FIN DE CAMBIO ---
     try {
         const historyCollectionPath = `/artifacts/${appId}/public/data/appHistory`;
         await addDoc(collection(db, historyCollectionPath), newLog);
@@ -365,14 +367,19 @@ const App = () => {
                 Salida: log.checkOut
             }));
             break;
+            
+        // --- INICIO DE CAMBIO: Ordenar Historial ---
         case 'historial': 
-            dataToExport = appHistory.map(h => ({
-                Fecha: h.timestamp,
+            const sortedHistory = [...appHistory].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            dataToExport = sortedHistory.map(h => ({
+                Fecha: new Date(h.timestamp).toLocaleString('es-ES'), // Formatear
                 Usuario: h.user,
                 Accion: h.action,
                 Detalles: h.details
             }));
             break;
+        // --- FIN DE CAMBIO ---
+            
         default: addNotification("Tipo de dato para exportar no reconocido."); return;
     }
 
@@ -920,7 +927,6 @@ const App = () => {
               return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
             })}
 
-            {/* --- INICIO DE CAMBIO: Comprobación por el nuevo ID --- */}
             {currentUser !== 'Gonzalo Navarro' && (
                 <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}>
                     <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span>
@@ -939,7 +945,6 @@ const App = () => {
                 })}
               </>
             )}
-            {/* --- FIN DE CAMBIO --- */}
 
           </div>
           <div>
