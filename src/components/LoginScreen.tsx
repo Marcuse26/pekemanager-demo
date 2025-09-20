@@ -8,7 +8,7 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// --- INICIO DE CAMBIOS: Contraseñas simplificadas ---
+// Contraseñas simplificadas y Trabajador 4 añadido
 const userProfiles = [
     { id: 'gonzalo', displayName: 'Gonzalo', password: 'gonzalo2025', avatarInitial: 'G' },
     { id: 'trabajador1', displayName: 'Trabajador 1', password: 'peke1111', avatarInitial: '1' },
@@ -16,7 +16,6 @@ const userProfiles = [
     { id: 'trabajador3', displayName: 'Trabajador 3', password: 'peke3333', avatarInitial: '3' },
     { id: 'trabajador4', displayName: 'Trabajador 4', password: 'peke4444', avatarInitial: '4' },
 ];
-// --- FIN DE CAMBIOS ---
 
 // Estilo para el texto dentro del avatar
 const avatarTextStyle: React.CSSProperties = {
@@ -61,10 +60,9 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
   const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
 
-  // --- INICIO DE CAMBIO: Lógica para rejilla 2x2 ---
+  // Lógica para rejilla 2x2
   const row1Workers = workerProfiles.slice(0, 2); // Trabajador 1, 2
   const row2Workers = workerProfiles.slice(2, 4); // Trabajador 3, 4
-  // --- FIN DE CAMBIO ---
 
   return (
     <div style={styles.loginContainer}>
@@ -87,7 +85,6 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                         </div>
                     )}
 
-                    {/* --- INICIO DE CAMBIO: Layout 2x2 --- */}
                     {/* Fila 2: Trabajador 1 y 2 */}
                     <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
                         {row1Workers.map(profile => ( 
@@ -110,7 +107,6 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                             </div>
                         ))}
                     </div>
-                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </>
         ) : (
@@ -119,7 +115,9 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                     <div style={styles.userAvatar}>
                         <span style={avatarTextStyle}>{selectedProfile?.avatarInitial}</span>
                     </div>
-                    <span style_={styles.userName}>{selectedProfile?.displayName}</span>
+                    {/* --- INICIO DE CORRECCIÓN: 'style_' cambiado a 'style' --- */}
+                    <span style={styles.userName}>{selectedProfile?.displayName}</span>
+                    {/* --- FIN DE CORRECCIÓN --- */}
                 </div>
                 <form onSubmit={handleLogin} style={{width: '80%'}}>
                     <input 
