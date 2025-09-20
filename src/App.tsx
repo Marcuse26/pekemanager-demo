@@ -300,7 +300,6 @@ const App = () => {
             }));
             break;
         
-        // --- INICIO DE CAMBIO: Ordenar Asistencia ---
         case 'asistencia': 
             const sortedAttendance = [...attendance].sort((a, b) => b.date.localeCompare(a.date));
             dataToExport = sortedAttendance.map(a => ({
@@ -312,21 +311,39 @@ const App = () => {
                 Recogido_Por: a.pickedUpBy
             }));
             break;
-        // --- FIN DE CAMBIO ---
 
+        // --- INICIO DE CAMBIOS: Lógica de exportación de facturación ---
         case 'facturacion': 
-            dataToExport = invoices.map(i => ({
+            const activeStudentIds = new Set(
+                children
+                    .filter(isStudentActiveThisMonth)
+                    .map(c => c.numericId)
+            );
+            
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+
+            const currentMonthActiveInvoices = invoices.filter(inv => {
+                const invDate = new Date(inv.date);
+                return activeStudentIds.has(inv.childId) &&
+                        invDate.getMonth() === currentMonth &&
+                        invDate.getFullYear() === currentYear;
+            });
+            
+            currentMonthActiveInvoices.sort((a, b) => a.childName.localeCompare(b.childName));
+            
+            dataToExport = currentMonthActiveInvoices.map(i => ({
                 Factura_ID: i.numericId,
                 Alumno: i.childName,
-                Fecha: i.date,
+                // Fecha: i.date, // Omitida
                 Base: i.base,
                 Penalizaciones: i.penalties,
                 Importe_Total: i.amount,
                 Estado: i.status
             }));
             break;
+        // --- FIN DE CAMBIOS ---
 
-        // --- INICIO DE CAMBIO: Ordenar Penalizaciones ---
         case 'penalizaciones': 
             const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
             dataToExport = sortedPenalties.map(p => ({
@@ -336,7 +353,6 @@ const App = () => {
                 Motivo: p.reason
             }));
             break;
-        // --- FIN DE CAMBIO ---
             
         case 'fichajes':
             const sortedLogs = [...staffTimeLogs].sort((a, b) => {

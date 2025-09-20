@@ -41,7 +41,9 @@ const PenaltiesViewer = ({ penalties, config, onExport, onUpdatePenalty, onDelet
         <div style={styles.card}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h3 style={styles.cardTitle}>Registro de Penalizaciones</h3>
-                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar</button>
+                {/* --- INICIO DE CAMBIO: Texto del botón --- */}
+                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Penalizaciones</button>
+                {/* --- FIN DE CAMBIO --- */}
             </div>
             <div style={styles.listContainer}>
                 {penalties.length > 0 ? penalties.map(penalty => (

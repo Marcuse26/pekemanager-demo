@@ -36,7 +36,7 @@ const AttendanceManager = ({ students, attendance, onSave, onExport }: Attendanc
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}> {/* */}
                  <h3 style={{...styles.cardTitle, margin:0}}>Control de Asistencia - {new Date(today).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h3> {/* */}
                  
-                 {/* --- INICIO DE CAMBIOS (Input de búsqueda añadido) --- */}
+                 {/* --- INICIO DE CAMBIOS (Input de búsqueda y texto de botón) --- */}
                  <div style={{display: 'flex', gap: '10px'}}>
                     <input
                         type="text"
@@ -45,7 +45,7 @@ const AttendanceManager = ({ students, attendance, onSave, onExport }: Attendanc
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{...styles.formInputSmall, width: '250px'}}
                     />
-                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar</button> {/* */}
+                    <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Asistencia</button> {/* */}
                  </div>
                  {/* --- FIN DE CAMBIOS --- */}
             </div>

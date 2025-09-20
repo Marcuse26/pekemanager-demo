@@ -65,34 +65,27 @@ const Invoicing = ({
             const student = students.find(s => s.numericId === inv.childId);
 
             if (!student) {
-                // Factura huérfana (sin alumno), va a "pasadas" por defecto
                 past.push(inv);
                 continue;
             }
 
-            // ASOCIACIÓN BASADA EN ESTADO DEL ALUMNO
-            
-            // 1. Alumnos activos este mes -> Pestaña "Actual"
             if (isStudentActiveThisMonth(student)) {
                 active.push(inv);
             } 
-            // 2. Alumnos con baja anterior a este mes -> Pestaña "Pasadas"
             else if (isStudentInactivePast(student)) {
                 past.push(inv);
             } 
-            // 3. Alumnos inactivos por otras razones (alta futura, etc.)
             else {
                 other.push(inv);
             }
         }
         
-        // Ordenar
         active.sort((a, b) => a.childName.localeCompare(b.childName));
         past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); 
         other.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return { activeInvoices: active, pastInvoices: past, otherInvoices: other };
-    }, [invoices, students]); // Dependencia actualizada a 'students'
+    }, [invoices, students]);
 
 
     const handlePastInvoiceExport = (invoice: Invoice) => {
@@ -104,7 +97,6 @@ const Invoicing = ({
         }
     };
     
-    // Lógica de filtrado (ahora se aplica a la lista seleccionada)
     const lowerSearchTerm = searchTerm.toLowerCase();
     let listToRender: Invoice[] = [];
     let placeholderText = "Buscar por nombre de alumno...";
@@ -132,7 +124,6 @@ const Invoicing = ({
                     Facturación ({listCount})
                 </h3>
                 
-                {/* Input de búsqueda siempre visible */}
                 <input
                     type="text"
                     placeholder={placeholderText}
@@ -141,15 +132,16 @@ const Invoicing = ({
                     style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
                 />
 
+                {/* --- INICIO DE CAMBIO: Texto del botón --- */}
                 <button 
                     onClick={onExport} 
                     style={{...styles.actionButton, backgroundColor: '#17a2b8', flexShrink: 0}}
                 >
-                    <Download size={16} style={{marginRight: '8px'}} />Exportar Todo
+                    <Download size={16} style={{marginRight: '8px'}} />Exportar Facturación
                 </button>
+                {/* --- FIN DE CAMBIO --- */}
             </div>
 
-            {/* --- INICIO DE CAMBIO: Pestañas renombradas --- */}
             <div style={styles.subTabContainer}>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
@@ -170,7 +162,6 @@ const Invoicing = ({
                     Inactivos (meses posteriores) ({otherInvoices.length})
                 </button>
             </div>
-            {/* --- FIN DE CAMBIO --- */}
 
 
             <div style={styles.listContainer}>
