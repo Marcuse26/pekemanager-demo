@@ -28,18 +28,17 @@ const Invoicing = ({
     onDeleteInvoice
 }: InvoicingProps) => {
     
-    // --- CAMBIO: Estado con 3 opciones ---
+    // Estado con 3 opciones
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => { onUpdateStatus(invoiceId, newStatus); };
 
-    // --- INICIO DE LA MODIFICACIÓN ---
     // El useMemo ahora clasifica en TRES listas, basándose en el estado del alumno
     const { activeInvoices, pastInvoices, otherInvoices } = useMemo(() => {
         const active: Invoice[] = [];
         const past: Invoice[] = [];
-        const other: Invoice[] = []; // <-- Nueva lista
+        const other: Invoice[] = []; // Nueva lista
         
         // Definiciones de Fecha
         const firstDayThisMonth = new Date(currentYear, currentMonth, 1);
@@ -93,7 +92,7 @@ const Invoicing = ({
         other.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return { activeInvoices: active, pastInvoices: past, otherInvoices: other };
-    }, [invoices, students]); // <-- Dependencia actualizada a 'students'
+    }, [invoices, students]); // Dependencia actualizada a 'students'
 
 
     const handlePastInvoiceExport = (invoice: Invoice) => {
@@ -105,7 +104,7 @@ const Invoicing = ({
         }
     };
     
-    // --- CAMBIO: Lógica de filtrado (ahora se aplica a la lista seleccionada) ---
+    // Lógica de filtrado (ahora se aplica a la lista seleccionada)
     const lowerSearchTerm = searchTerm.toLowerCase();
     let listToRender: Invoice[] = [];
     let placeholderText = "Buscar por nombre de alumno...";
@@ -125,7 +124,6 @@ const Invoicing = ({
             break;
     }
     const listCount = listToRender.length;
-    // --- FIN DE LA MODIFICACIÓN ---
 
     return (
         <div style={styles.card}>
@@ -134,7 +132,7 @@ const Invoicing = ({
                     Facturación ({listCount})
                 </h3>
                 
-                {/* --- CAMBIO: Input de búsqueda siempre visible --- */}
+                {/* Input de búsqueda siempre visible */}
                 <input
                     type="text"
                     placeholder={placeholderText}
@@ -142,7 +140,6 @@ const Invoicing = ({
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}}
                 />
-                {/* --- FIN CAMBIO --- */}
 
                 <button 
                     onClick={onExport} 
@@ -152,7 +149,7 @@ const Invoicing = ({
                 </button>
             </div>
 
-            {/* --- CAMBIO: Tres pestañas --- */}
+            {/* Tres pestañas */}
             <div style={styles.subTabContainer}>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
@@ -173,7 +170,6 @@ const Invoicing = ({
                     Inactivos (Otros) ({otherInvoices.length})
                 </button>
             </div>
-            {/* --- FIN CAMBIO --- */}
 
 
             <div style={styles.listContainer}>
@@ -181,8 +177,11 @@ const Invoicing = ({
                     <div key={inv.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{inv.childName}</p>
-                            <p style={D( {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
+                            {/* --- INICIO DE LA CORRECCIÓN --- */}
+                            <p style={styles.listItemInfo}>
+                                Fecha Factura: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
                             </p>
+                            {/* --- FIN DE LA CORRECCIÓN --- */}
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                             <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>
