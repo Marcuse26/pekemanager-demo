@@ -116,11 +116,11 @@ const Invoicing = ({
             break;
         case 'pasadas':
             listToRender = pastInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
-            placeholderText = "Buscar en inactivos (pasados)...";
+            placeholderText = "Buscar en inactivos (anteriores)...";
             break;
         case 'otros':
             listToRender = otherInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
-            placeholderText = "Buscar en inactivos (otros)...";
+            placeholderText = "Buscar en inactivos (posteriores)...";
             break;
     }
     const listCount = listToRender.length;
@@ -149,7 +149,7 @@ const Invoicing = ({
                 </button>
             </div>
 
-            {/* Tres pestañas */}
+            {/* --- INICIO DE CAMBIO: Pestañas renombradas --- */}
             <div style={styles.subTabContainer}>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
@@ -161,15 +161,16 @@ const Invoicing = ({
                     style={{...styles.subTabButton, ...(activeSubTab === 'pasadas' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('pasadas'); setSearchTerm(''); }}
                 >
-                    Inactivos (Baja pasada) ({pastInvoices.length})
+                    Inactivos (meses anteriores) ({pastInvoices.length})
                 </button>
                 <button 
                     style={{...styles.subTabButton, ...(activeSubTab === 'otros' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('otros'); setSearchTerm(''); }}
                 >
-                    Inactivos (Otros) ({otherInvoices.length})
+                    Inactivos (meses posteriores) ({otherInvoices.length})
                 </button>
             </div>
+            {/* --- FIN DE CAMBIO --- */}
 
 
             <div style={styles.listContainer}>
@@ -177,11 +178,9 @@ const Invoicing = ({
                     <div key={inv.id} style={styles.listItem}>
                         <div>
                             <p style={styles.listItemName}>{inv.childName}</p>
-                            {/* --- INICIO DE LA CORRECCIÓN --- */}
                             <p style={styles.listItemInfo}>
                                 Fecha Factura: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
                             </p>
-                            {/* --- FIN DE LA CORRECCIÓN --- */}
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                             <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>

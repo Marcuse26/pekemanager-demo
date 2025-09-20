@@ -183,7 +183,7 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
             </div>
         </div>
 
-        {/* --- CONTENEDOR DE SUB-PESTAÑAS (4 pestañas) --- */}
+        {/* --- INICIO DE CAMBIO: Pestañas reordenadas --- */}
         <div style={styles.subTabContainer}>
             <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'activos' ? styles.subTabButtonActive : {})}}
@@ -192,16 +192,16 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
                 Activos ({activeStudents.length})
             </button>
             <button 
-                style={{...styles.subTabButton, ...(activeSubTab === 'proximos' ? styles.subTabButtonActive : {})}}
-                onClick={() => setActiveSubTab('proximos')}
-            >
-                Activos (próximo mes) ({nextMonthStudents.length})
-            </button>
-            <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'inactivos' ? styles.subTabButtonActive : {})}}
                 onClick={() => setActiveSubTab('inactivos')}
             >
                 Inactivos ({inactiveStudents.length})
+            </button>
+            <button 
+                style={{...styles.subTabButton, ...(activeSubTab === 'proximos' ? styles.subTabButtonActive : {})}}
+                onClick={() => setActiveSubTab('proximos')}
+            >
+                Activos (próximo mes) ({nextMonthStudents.length})
             </button>
             <button 
                 style={{...styles.subTabButton, ...(activeSubTab === 'todos' ? styles.subTabButtonActive : {})}}
@@ -210,6 +210,7 @@ const StudentList = ({ students, onSelectChild, onDeleteChild, onExport }: Stude
                 Todos ({allStudentsWithStatus.length})
             </button>
         </div>
+        {/* --- FIN DE CAMBIO --- */}
         
         <div style={styles.listContainer}>
             {renderList()}
