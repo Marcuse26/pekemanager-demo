@@ -50,8 +50,16 @@ import Settings from './components/tabs/Settings';
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN (EL "SHELL" O CONTENEDOR) ---
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string>('invitado');
+  
+  // --- INICIO DE CAMBIO: Login Persistente ---
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return sessionStorage.getItem('isLoggedIn') === 'true';
+  });
+  const [currentUser, setCurrentUser] = useState<string>(() => {
+    return sessionStorage.getItem('currentUser') || 'invitado';
+  });
+  // --- FIN DE CAMBIO ---
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedChild, setSelectedChild] = useState<Student | null>(null);
   const [viewingCalendarForStudent, setViewingCalendarForStudent] = useState<Student | null>(null);
@@ -346,9 +354,12 @@ const App = () => {
     }
   };
 
+  // --- INICIO DE CAMBIO: Login Persistente ---
   const handleLogin = (username: string) => {
     setIsLoggedIn(true);
     setCurrentUser(username);
+    sessionStorage.setItem('isLoggedIn', 'true');
+    sessionStorage.setItem('currentUser', username);
     addAppHistoryLog(username, 'Inicio de Sesión', `El usuario ${username} ha iniciado sesión.`);
     setActiveTab('dashboard');
   };
@@ -357,8 +368,11 @@ const App = () => {
     addAppHistoryLog(currentUser, 'Cierre de Sesión', `El usuario ${currentUser} ha cerrado sesión.`);
     setIsLoggedIn(false);
     setCurrentUser('invitado');
+    sessionStorage.removeItem('isLoggedIn');
+    sessionStorage.removeItem('currentUser');
     setActiveTab('dashboard');
   };
+  // --- FIN DE CAMBIO ---
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -517,7 +531,6 @@ const App = () => {
         }
     };
 
-    // --- NUEVA FUNCIÓN AÑADIDA ---
     const handleDeleteInvoice = (invoice: Invoice) => {
         const onConfirmDelete = async () => {
             if (!userId) return;
@@ -539,7 +552,6 @@ const App = () => {
             onConfirm: onConfirmDelete,
         });
     };
-    // --- FIN NUEVA FUNCIÓN ---
 
     const handleUpdatePenalty = async (penaltyId: string, updates: Partial<Omit<Penalty, 'id'>>) => {
         if (!userId) return;
@@ -791,7 +803,7 @@ const App = () => {
                   onExport={() => handleExport('facturacion')} 
                   students={children}
                   onGeneratePastInvoice={handleGeneratePDFInvoice}
-                  onDeleteInvoice={handleDeleteInvoice} // <-- PROP AÑADIDA
+                  onDeleteInvoice={handleDeleteInvoice}
               />;
           case 'penalizaciones':
               return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;

@@ -9,7 +9,11 @@ export const styles: { [key: string]: React.CSSProperties } = {
   loginButton: { width: '100%', padding: '12px', border: 'none', borderRadius: '6px', backgroundColor: '#007bff', color: 'white', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'background-color 0.2s' },
   loginError: { color: '#dc3545', marginBottom: '15px', fontSize: '14px' },
   userSelectionContainer: { display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginTop: '20px', },
-  userProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s', width: '100px', },
+  
+  // --- INICIO DE CAMBIO: Layout Login ---
+  userProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s', width: '100px', boxSizing: 'border-box' },
+  // --- FIN DE CAMBIO ---
+  
   userAvatar: { width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#e9ecef', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#495057', marginBottom: '8px', },
   userName: { fontSize: '14px', fontWeight: '500', color: '#343a40', },
   selectedUserProfile: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px', },
