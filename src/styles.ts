@@ -144,6 +144,6 @@ export const styles: { [key: string]: React.CSSProperties } = {
     subTabButtonActive: {
         color: '#007bff',
         borderBottom: '2px solid #007bff',
-        fontWeight: '600',
+        fontWeight: '601',
     },
 };

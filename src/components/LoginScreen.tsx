@@ -8,7 +8,7 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// --- INICIO DE CAMBIOS: Nuevas contraseñas y Trabajador 4 ---
+// (Contraseñas actualizadas y Trabajador 4 añadido)
 const userProfiles = [
     { id: 'gonzalo', displayName: 'Gonzalo', password: 'gOnz@2o25', avatarInitial: 'G' },
     { id: 'trabajador1', displayName: 'Trabajador 1', password: 'pEkeM@n1!', avatarInitial: '1' },
@@ -16,9 +16,8 @@ const userProfiles = [
     { id: 'trabajador3', displayName: 'Trabajador 3', password: 'rEcrE@3*', avatarInitial: '3' },
     { id: 'trabajador4', displayName: 'Trabajador 4', password: 'wOrkEr$4+', avatarInitial: '4' },
 ];
-// --- FIN DE CAMBIOS ---
 
-// Estilo para el texto dentro del avatar (G, 1, 2, 3)
+// Estilo para el texto dentro del avatar (G, 1, 2, 3, 4)
 const avatarTextStyle: React.CSSProperties = {
     fontSize: '32px',
     fontWeight: 'bold',
@@ -57,9 +56,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
       setError('');
   };
 
-  // Buscamos el perfil completo del usuario seleccionado
   const selectedProfile = userProfiles.find(p => p.id === selectedUser);
-
   const gonzaloProfile = userProfiles.find(p => p.id === 'gonzalo');
   const workerProfiles = userProfiles.filter(p => p.id !== 'gonzalo');
 
@@ -72,10 +69,8 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
             <>
                 <p style={styles.loginSubtitle}>¿Quién eres?</p>
                 
-                {/* Contenedor principal ahora es vertical (hereda el 'gap' de 20px de styles.ts) */}
                 <div style={{...styles.userSelectionContainer, flexDirection: 'column', alignItems: 'center'}}>
                     
-                    {/* Fila 1: Renderizar a Gonzalo (centrado arriba) */}
                     {gonzaloProfile && (
                         <div key={gonzaloProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(gonzaloProfile.id)}>
                             <div style={styles.userAvatar}>
@@ -85,8 +80,9 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                         </div>
                     )}
 
-                    {/* --- CORRECCIÓN: Eliminado el 'marginTop: 20px' de aquí para reducir el espacio --- */}
-                    <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
+                    {/* --- INICIO DE CAMBIO: gap de 20px a 5px --- */}
+                    <div style={{display: 'flex', justifyContent: 'center', gap: '5px', flexWrap: 'wrap'}}>
+                    {/* --- FIN DE CAMBIO --- */}
                         {workerProfiles.map(profile => ( 
                             <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
                                 <div style={styles.userAvatar}>

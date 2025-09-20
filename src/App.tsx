@@ -719,7 +719,7 @@ const App = () => {
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
-        doc.setTextColor('#c55a33');
+        doc.setTextColor('#c55a32');
         doc.text("mi pequeño recreo", 105, 22, { align: 'center' });
         doc.setFont('Helvetica', 'normal');
         doc.setFontSize(10);
