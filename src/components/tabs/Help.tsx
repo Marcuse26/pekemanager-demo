@@ -1,5 +1,5 @@
 // Contenido para: src/components/tabs/Help.tsx
-import { styles } from '../../styles'; // <-- Ruta corregida a '../../styles'
+import { styles } from '../../styles'; // <-- Esta es la ruta correcta
 
 const Help = () => {
     return (

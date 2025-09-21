@@ -45,7 +45,7 @@ import PenaltiesViewer from './components/tabs/PenaltiesViewer';
 import StaffLogViewer from './components/tabs/StaffLogViewer';
 import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
-import Help from './components/tabs/Help'; // Ruta a la nueva carpeta de tabs
+import Help from './components/tabs/Help'; // <-- Ruta corregida
 
 // --- FIN DE IMPORTACIONES ---
 
@@ -750,7 +750,7 @@ const App = () => {
             const newInvoiceData: Omit<Invoice, 'id'> = {
                 numericId: Date.now() + student.numericId,
                 childId: student.numericId,
-                childName: `${child.name} ${child.surname}`,
+                childName: `${student.name} ${student.surname}`,
                 date: new Date().toISOString().split('T')[0],
                 amount: totalAmount,
                 base: schedule.price,
