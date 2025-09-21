@@ -45,9 +45,7 @@ import PenaltiesViewer from './components/tabs/PenaltiesViewer';
 import StaffLogViewer from './components/tabs/StaffLogViewer';
 import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
-// --- INICIO DE CAMBIO: Ruta de importación corregida ---
-import Help from './components/tabs/Help';
-// --- FIN DE CAMBIO ---
+import Help from './components/tabs/Help'; // Ruta a la nueva carpeta de tabs
 
 // --- FIN DE IMPORTACIONES ---
 
@@ -752,7 +750,7 @@ const App = () => {
             const newInvoiceData: Omit<Invoice, 'id'> = {
                 numericId: Date.now() + student.numericId,
                 childId: student.numericId,
-                childName: `${student.name} ${student.surname}`,
+                childName: `${child.name} ${child.surname}`,
                 date: new Date().toISOString().split('T')[0],
                 amount: totalAmount,
                 base: schedule.price,
@@ -969,7 +967,7 @@ const App = () => {
               <>
                 {[
                   { id: 'personal', name: 'Personal', icon: Briefcase },
-                  { id:Añade el logo de la empresa como puedas junto con el de pekemanager y el contacto de soporte 'historial', name: 'Historial Web', icon: History },
+                  { id: 'historial', name: 'Historial Web', icon: History },
                   { id: 'configuracion', name: 'Configuración', icon: SettingsIcon },
                 ].map(tab => {
                   const Icon = tab.icon; const isActive = activeTab === tab.id;
