@@ -11,7 +11,7 @@ import autoTable from 'jspdf-autotable';
 import { 
     Users, Clock, FileText, DollarSign, UserPlus, LogOut, 
     Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck, 
-    Settings as SettingsIcon, History, HelpCircle // <-- AÑADIDO HelpCircle
+    Settings as SettingsIcon, History, HelpCircle
 } from 'lucide-react';
 
 // --- Importaciones de nuestro código modularizado (Fase 3) ---
@@ -45,7 +45,9 @@ import PenaltiesViewer from './components/tabs/PenaltiesViewer';
 import StaffLogViewer from './components/tabs/StaffLogViewer';
 import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
-import Help from './components/Help'; // <-- AÑADIDO (ruta corregida)
+// --- INICIO DE CAMBIO: Ruta de importación corregida ---
+import Help from './components/tabs/Help';
+// --- FIN DE CAMBIO ---
 
 // --- FIN DE IMPORTACIONES ---
 
@@ -967,7 +969,7 @@ const App = () => {
               <>
                 {[
                   { id: 'personal', name: 'Personal', icon: Briefcase },
-                  { id: 'historial', name: 'Historial Web', icon: History },
+                  { id:Añade el logo de la empresa como puedas junto con el de pekemanager y el contacto de soporte 'historial', name: 'Historial Web', icon: History },
                   { id: 'configuracion', name: 'Configuración', icon: SettingsIcon },
                 ].map(tab => {
                   const Icon = tab.icon; const isActive = activeTab === tab.id;
