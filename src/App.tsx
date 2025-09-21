@@ -7,11 +7,11 @@ import jsPDF from 'jspdf';
 // @ts-ignore
 import autoTable from 'jspdf-autotable';
 
-// --- Importaciones de Iconos (SOLO los que usa el Sidebar y el botón de Logout) ---
+// --- Importaciones de Iconos ---
 import { 
     Users, Clock, FileText, DollarSign, UserPlus, LogOut, 
     Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck, 
-    Settings as SettingsIcon, History 
+    Settings as SettingsIcon, History, HelpCircle // <-- AÑADIDO HelpCircle
 } from 'lucide-react';
 
 // --- Importaciones de nuestro código modularizado (Fase 3) ---
@@ -45,6 +45,7 @@ import PenaltiesViewer from './components/tabs/PenaltiesViewer';
 import StaffLogViewer from './components/tabs/StaffLogViewer';
 import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
+import Help from './components/Help'; // <-- AÑADIDO (ruta corregida)
 
 // --- FIN DE IMPORTACIONES ---
 
@@ -367,28 +368,22 @@ const App = () => {
             }));
             break;
             
-        // --- INICIO DE CAMBIO: Ordenar Historial (con parseo de fechas) ---
         case 'historial':
-            // Helper para parsear CUALQUIER formato de fecha (antiguo o nuevo)
             const parseTimestamp = (timestamp: string): number => {
                 if (!timestamp) return 0;
-                // Formato Nuevo (ISO String): "2025-09-21T01:10:00.123Z"
                 if (timestamp.includes('T') && timestamp.includes('Z')) {
                     return new Date(timestamp).getTime();
                 }
-                // Formato Antiguo (es-ES): "21/9/2025, 1:10:00"
                 if (timestamp.includes('/') && timestamp.includes(',')) {
                     try {
                         const [datePart, timePart] = timestamp.split(', ');
                         const [day, month, year] = datePart.split('/').map(Number);
                         const [hour, minute, second] = timePart.split(':').map(Number);
-                        // new Date(año, mes (0-11), dia, hora, min, seg)
                         return new Date(year, month - 1, day, hour, minute, second).getTime();
                     } catch (e) {
-                        return 0; // Si falla el parseo, va al final
+                        return 0;
                     }
                 }
-                // Si es cualquier otra cosa
                 return new Date(timestamp).getTime();
             };
 
@@ -397,14 +392,12 @@ const App = () => {
             );
             
             dataToExport = sortedHistory.map(h => ({
-                // Usamos el parser para asegurar que se formatea bien
                 Fecha: h.timestamp ? new Date(parseTimestamp(h.timestamp)).toLocaleString('es-ES') : 'N/A',
                 Usuario: h.user,
                 Accion: h.action,
                 Detalles: h.details
             }));
             break;
-        // --- FIN DE CAMBIO ---
             
         default: addNotification("Tipo de dato para exportar no reconocido."); return;
     }
@@ -514,9 +507,7 @@ const App = () => {
             const newLog: HistoryLog = {
                 id: `hist_${Date.now()}`,
                 user: user,
-                // --- INICIO DE CAMBIO: Guardar timestamp como locale string ---
                 timestamp: new Date().toLocaleString('es-ES'),
-                // --- FIN DE CAMBIO ---
                 changes: changesDescription,
             };
             finalUpdateData.modificationHistory = [...(originalStudent.modificationHistory || []), newLog];
@@ -888,6 +879,10 @@ const App = () => {
               return <AppHistoryViewer history={appHistory} onExport={() => handleExport('historial')} />;
           case 'configuracion':
               return <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />;
+          // --- INICIO DE CAMBIO: Nuevo case ---
+          case 'ayuda':
+              return <Help />;
+          // --- FIN DE CAMBIO ---
           default:
               return <Dashboard students={children} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
       }
@@ -955,11 +950,18 @@ const App = () => {
               return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
             })}
 
+            {/* --- INICIO DE CAMBIO: Pestaña 'Ayuda' añadida para personal --- */}
             {currentUser !== 'Gonzalo Navarro' && (
+              <>
                 <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}>
                     <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span>
                 </button>
+                <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}>
+                    <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span>
+                </button>
+              </>
             )}
+            {/* --- FIN DE CAMBIO --- */}
 
             {currentUser === 'Gonzalo Navarro' && (
               <>
@@ -989,7 +991,9 @@ const App = () => {
 
         <main style={styles.mainContent}>
           <header style={styles.header}>
-            <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+             {/* --- INICIO DE CAMBIO: Título del header para 'ayuda' --- */}
+            <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+             {/* --- FIN DE CAMBIO --- */}
              <button onClick={handleLogout} style={styles.logoutButton}>
                 <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión
              </button>
