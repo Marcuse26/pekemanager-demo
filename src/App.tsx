@@ -1,4 +1,4 @@
-// Contenido COMPLETO y CORREGIDO para: src/App.tsx
+// Contenido para: src/App.tsx
 
 // --- Importaciones de React y Librerías ---
 import { useState, useEffect, useCallback } from 'react';
@@ -8,20 +8,20 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // --- Importaciones de Iconos ---
-import { 
-    Users, Clock, FileText, DollarSign, UserPlus, LogOut, 
-    Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck, 
+import {
+    Users, Clock, FileText, DollarSign, UserPlus, LogOut,
+    Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck,
     Settings as SettingsIcon, History, HelpCircle
 } from 'lucide-react';
 
 // --- Importaciones de nuestro código modularizado (Fase 3) ---
-import { db, ensureAnonymousAuth } from './firebase/config'; 
+import { db, ensureAnonymousAuth } from './firebase/config';
 import { schedules } from './config/schedules';
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
-import type { 
-    Student, Attendance, Penalty, Invoice, StaffTimeLog, Config, AppHistoryLog, 
-    NotificationMessage, StudentFormData, HistoryLog, Document 
+import type {
+    Student, Attendance, Penalty, Invoice, StaffTimeLog, Config, AppHistoryLog,
+    NotificationMessage, StudentFormData, HistoryLog, Document
 } from './types';
 
 // --- Importaciones de Componentes de UI (Fase 4) ---
@@ -51,7 +51,7 @@ import Help from './components/tabs/Help';
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN (EL "SHELL" O CONTENEDOR) ---
 const App = () => {
-  
+
   // --- Estados de la Aplicación ---
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
   const [currentUser, setCurrentUser] = useState<string>(() => sessionStorage.getItem('currentUser') || 'invitado');
@@ -99,7 +99,7 @@ const App = () => {
   ];
 
   useEffect(() => {
-    if (!userId) return; 
+    if (!userId) return;
 
     const unsubscribers = dataListeners.map(({ name, setter }) => {
         const collectionPath = `/artifacts/${appId}/public/data/${name}`;
@@ -109,18 +109,18 @@ const App = () => {
             setter(data as any);
         }, (error) => console.error(`Error fetching ${name}:`, error));
     });
-    
+
     const configDocPath = `/artifacts/${appId}/public/data/settings/config`;
     const unsubConfig = onSnapshot(doc(db, configDocPath), (docSnap) => {
         if (docSnap.exists()) {
             setConfig(docSnap.data() as Config);
         } else {
-             setDoc(doc(db, configDocPath), config); 
+             setDoc(doc(db, configDocPath), config);
         }
     }, (error) => console.error("Error fetching config:", error));
 
     unsubscribers.push(unsubConfig);
-    
+
     return () => unsubscribers.forEach(unsub => unsub());
 
   }, [userId]);
@@ -131,15 +131,15 @@ const App = () => {
           if (freshStudentData) {
               setSelectedChild(freshStudentData);
           } else {
-              setSelectedChild(null); 
+              setSelectedChild(null);
           }
       }
   }, [children, selectedChild]);
 
   // --- LÓGICA DE NEGOCIO (HANDLERS) ---
-  
+
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
-  
+
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
@@ -186,7 +186,7 @@ const App = () => {
             if (child.startMonth && child.plannedEndMonth) {
                 const startDate = new Date(child.startMonth);
                 const endDate = new Date(child.plannedEndMonth);
-                
+
                 const stayDurationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
 
                 if (stayDurationDays < 28) {
@@ -201,9 +201,9 @@ const App = () => {
                 }
             }
 
-            const childPenalties = penalties.filter(p => 
-                p.childId === child.numericId && 
-                new Date(p.date).getMonth() === currentBillingMonth && 
+            const childPenalties = penalties.filter(p =>
+                p.childId === child.numericId &&
+                new Date(p.date).getMonth() === currentBillingMonth &&
                 new Date(p.date).getFullYear() === currentBillingYear
             );
             const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
@@ -211,7 +211,7 @@ const App = () => {
             let totalAmount = baseFee + totalPenalties + extendedScheduleFee;
             let enrollmentFeeApplied = !child.enrollmentPaid;
             if (enrollmentFeeApplied) totalAmount += 100;
-            
+
             const invoiceData: Omit<Invoice, 'id' | 'status'> = {
                 numericId: Date.now() + child.numericId,
                 childId: child.numericId,
@@ -225,12 +225,12 @@ const App = () => {
             };
 
             const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
-            const existingInvoice = invoices.find(inv => 
-                inv.childId === child.numericId && 
-                new Date(inv.date).getMonth() === currentBillingMonth && 
+            const existingInvoice = invoices.find(inv =>
+                inv.childId === child.numericId &&
+                new Date(inv.date).getMonth() === currentBillingMonth &&
                 new Date(inv.date).getFullYear() === currentBillingYear
             );
-            
+
             try {
                 if (existingInvoice) {
                     if (existingInvoice.amount !== invoiceData.amount || existingInvoice.base !== invoiceData.base) {
@@ -246,7 +246,7 @@ const App = () => {
                         status: 'Pendiente' as Invoice['status'],
                     });
                 }
-            } catch(e) { 
+            } catch(e) {
                 console.error("Error auto-updating invoice for ", child.name, e)
             }
         }
@@ -254,8 +254,8 @@ const App = () => {
 
     runSilentInvoiceUpdate();
 
-  }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
-  
+  }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]);
+
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
     const today = new Date();
@@ -273,8 +273,8 @@ const App = () => {
     }
 
     switch (dataType) {
-        case 'alumnos': 
-            const sortedChildren = [...children].sort((a, b) => 
+        case 'alumnos':
+            const sortedChildren = [...children].sort((a, b) =>
                 `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)
             );
              dataToExport = sortedChildren.map(c => ({
@@ -299,8 +299,8 @@ const App = () => {
                 NIF_Titular: c.nif
             }));
             break;
-        
-        case 'asistencia': 
+
+        case 'asistencia':
             const sortedAttendance = [...attendance].sort((a, b) => b.date.localeCompare(a.date));
             dataToExport = sortedAttendance.map(a => ({
                 Alumno: a.childName,
@@ -312,13 +312,13 @@ const App = () => {
             }));
             break;
 
-        case 'facturacion': 
+        case 'facturacion':
             const activeStudentIds = new Set(
                 children
                     .filter(isStudentActiveThisMonth)
                     .map(c => c.numericId)
             );
-            
+
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
 
@@ -328,9 +328,9 @@ const App = () => {
                         invDate.getMonth() === currentMonth &&
                         invDate.getFullYear() === currentYear;
             });
-            
+
             currentMonthActiveInvoices.sort((a, b) => a.childName.localeCompare(b.childName));
-            
+
             dataToExport = currentMonthActiveInvoices.map(i => ({
                 Factura_ID: i.numericId,
                 Alumno: i.childName,
@@ -341,7 +341,7 @@ const App = () => {
             }));
             break;
 
-        case 'penalizaciones': 
+        case 'penalizaciones':
             const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
             dataToExport = sortedPenalties.map(p => ({
                 Alumno: p.childName,
@@ -350,11 +350,11 @@ const App = () => {
                 Motivo: p.reason
             }));
             break;
-            
+
         case 'fichajes':
             const sortedLogs = [...staffTimeLogs].sort((a, b) => {
                 const dateCompare = b.date.localeCompare(a.date);
-                if (dateCompare !== 0) return dateCompare; 
+                if (dateCompare !== 0) return dateCompare;
                 return (b.checkIn || '').localeCompare(a.checkIn || '');
             });
              dataToExport = sortedLogs.map(log => ({
@@ -364,7 +364,7 @@ const App = () => {
                 Salida: log.checkOut
             }));
             break;
-            
+
         case 'historial':
             const parseTimestamp = (timestamp: string): number => {
                 if (!timestamp) return 0;
@@ -381,7 +381,7 @@ const App = () => {
             };
 
             const sortedHistory = [...appHistory].sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
-            
+
             dataToExport = sortedHistory.map(h => ({
                 Fecha: h.timestamp ? new Date(parseTimestamp(h.timestamp)).toLocaleString('es-ES') : 'N/A',
                 Usuario: h.user,
@@ -389,7 +389,7 @@ const App = () => {
                 Detalles: h.details
             }));
             break;
-            
+
         default: addNotification("Tipo de dato para exportar no reconocido."); return;
     }
 
@@ -397,11 +397,11 @@ const App = () => {
         addNotification("No hay datos para exportar.");
         return;
     }
-    
+
     try {
-        const csv = convertToCSV(dataToExport); 
+        const csv = convertToCSV(dataToExport);
         const fileName = `${dataType}_export_${new Date().toISOString().split('T')[0]}.csv`;
-        downloadCSV(csv, fileName); 
+        downloadCSV(csv, fileName);
         addNotification(`Exportando ${dataType} a CSV.`);
     } catch (error) {
         console.error("Error exporting to CSV:", error);
@@ -434,12 +434,12 @@ const App = () => {
         return;
     }
 
-    const newChild: Omit<Student, 'id'> = { 
-        ...childForm, 
-        numericId: Date.now(), 
+    const newChild: Omit<Student, 'id'> = {
+        ...childForm,
+        numericId: Date.now(),
         paymentMethod: childForm.paymentMethod as Student['paymentMethod'],
         documents: [],
-        modificationHistory: [] 
+        modificationHistory: []
     };
     try {
         const childrenCollectionPath = `/artifacts/${appId}/public/data/children`;
@@ -454,7 +454,7 @@ const App = () => {
     }
   };
 
-  const handleDeleteChild = (childId: string, name: string) => { 
+  const handleDeleteChild = (childId: string, name: string) => {
       const onConfirmDelete = async () => {
           if (!userId) return;
           try {
@@ -489,8 +489,8 @@ const App = () => {
                 changesDescription += `Cambió '${key}'. `;
             }
         });
-        
-        const finalUpdateData: Partial<Student> = { ...updatedData }; 
+
+        const finalUpdateData: Partial<Student> = { ...updatedData };
 
         if (changesDescription) {
             const newLog: HistoryLog = {
@@ -504,7 +504,7 @@ const App = () => {
 
         try {
             const studentDocPath = `/artifacts/${appId}/public/data/children/${studentId}`;
-            await updateDoc(doc(db, studentDocPath), finalUpdateData as any); 
+            await updateDoc(doc(db, studentDocPath), finalUpdateData as any);
             addNotification(`Ficha de ${updatedData.name || originalStudent.name} guardada.`);
             if (changesDescription) {
                 addAppHistoryLog(user, 'Modificación de Ficha', `Se ha actualizado la ficha de ${originalStudent.name} ${originalStudent.surname}.`);
@@ -514,11 +514,11 @@ const App = () => {
             addNotification("Error al guardar la ficha.");
         }
     };
-    
+
     const handleAddDocument = async (studentId: string, documentData: Document, user: string) => {
         const student = children.find(c => c.id === studentId);
         if (!student || !userId) return;
-        
+
         const updatedDocuments = [...(student.documents || []), documentData];
         try {
             const studentDocPath = `/artifacts/${appId}/public/data/children/${studentId}`;
@@ -534,7 +534,7 @@ const App = () => {
   const handleSaveAttendance = async (attendanceData: Omit<Attendance, 'id'>) => {
     if (!userId) return;
     const existingEntry = attendance.find(a => a.date === attendanceData.date && a.childId === attendanceData.childId);
-    
+
     try {
         const attendanceCollectionPath = `/artifacts/${appId}/public/data/attendance`;
         if (existingEntry) {
@@ -545,10 +545,10 @@ const App = () => {
 
         addNotification(`Asistencia de ${attendanceData.childName} guardada.`);
         addAppHistoryLog(currentUser, 'Asistencia', `Se ha guardado la asistencia para ${attendanceData.childName} el ${attendanceData.date}.`);
-        
+
         if (attendanceData.exitTime) {
             const child = children.find(c => c.numericId === attendanceData.childId);
-            const schedule = schedules.find(s => s.id === child?.schedule); 
+            const schedule = schedules.find(s => s.id === child?.schedule);
             if (!child || !schedule) return;
             const [endH, endM] = schedule.endTime.split(':').map(Number);
             const [exitH, exitM] = attendanceData.exitTime.split(':').map(Number);
@@ -556,7 +556,7 @@ const App = () => {
             const exitMins = exitH * 60 + exitM;
             if (exitMins > endMins) {
                 const delayMins = exitMins - endMins;
-                const penaltyAmount = Math.ceil(delayMins / 15) * config.lateFee; 
+                const penaltyAmount = Math.ceil(delayMins / 15) * config.lateFee;
                 if (penaltyAmount > 0) {
                     const newPenalty = { childId: child.numericId, childName: `${child.name} ${child.surname}`, date: attendanceData.date, amount: penaltyAmount, reason: `Retraso de ${delayMins} min.` };
                     const penaltiesCollectionPath = `/artifacts/${appId}/public/data/penalties`;
@@ -642,23 +642,23 @@ const App = () => {
             addNotification("Error al guardar la configuración.")
         }
     };
-    
+
     const handleStaffCheckIn = async () => {
         if (!userId || !currentUser) return;
-        
-        const today = new Date(); 
+
+        const today = new Date();
         const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0'); 
+        const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
         const todayStr = `${year}-${month}-${day}`;
-        
+
         const checkInTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
         const newLog: Omit<StaffTimeLog, 'id'> = {
             userName: currentUser,
-            date: todayStr, 
+            date: todayStr,
             checkIn: checkInTime,
-            checkOut: '', 
+            checkOut: '',
         };
 
         try {
@@ -680,7 +680,7 @@ const App = () => {
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
         const todayStr = `${year}-${month}-${day}`;
-        
+
         const checkOutTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
         const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayStr && log.checkIn && !log.checkOut);
@@ -744,9 +744,9 @@ const App = () => {
                 }
             }
 
-            finalInvoice = invoices.find(inv => 
-                inv.childId === student.numericId && 
-                new Date(inv.date).getMonth() === targetMonth && 
+            finalInvoice = invoices.find(inv =>
+                inv.childId === student.numericId &&
+                new Date(inv.date).getMonth() === targetMonth &&
                 new Date(inv.date).getFullYear() === targetYear
             );
         }
@@ -754,7 +754,7 @@ const App = () => {
         if (!finalInvoice) {
             const schedule = schedules.find(s => s.id === student.schedule);
             if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
-            
+
             // Re-calculamos la cuota base aplicando la nueva lógica
             let baseFee = schedule.price;
             if (student.startMonth && student.plannedEndMonth) {
@@ -766,7 +766,7 @@ const App = () => {
                     baseFee = (schedule.price / 4) * (weeks + 1);
                 }
             }
-            
+
             const totalPenalties = 0; // No se calculan penalizaciones para facturas generadas al momento
             const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
             const enrollmentFee = !student.enrollmentPaid ? 100 : 0;
@@ -801,7 +801,7 @@ const App = () => {
         doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
         doc.text(`Fecha: ${new Date(finalInvoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
         doc.setDrawColor(220, 220, 220);
-        doc.rect(15, 60, 180, 25); 
+        doc.rect(15, 60, 180, 25);
         doc.setFont('Helvetica', 'bold');
         doc.text("Cliente:", 20, 66);
         doc.setFont('Helvetica', 'normal');
@@ -815,7 +815,7 @@ const App = () => {
         if (finalInvoice.enrollmentFeeIncluded) {
             tableRows.push(["Matrícula", "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
         }
-        
+
         let conceptText = `Jardín de infancia (${new Date(finalInvoice.date).toLocaleString('es-ES', { month: 'long' })})`;
         if (student.startMonth && student.plannedEndMonth) {
             const startDate = new Date(student.startMonth);
@@ -827,17 +827,17 @@ const App = () => {
             }
         }
         tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
-        
+
         if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
             tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
         }
-        
+
         if(finalInvoice.penalties > 0) {
             tableRows.push([`Penalizaciones por retraso`, "", "", `${finalInvoice.penalties.toFixed(2)} ${config.currency}`]);
         }
-        
+
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
-        
+
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -857,11 +857,11 @@ const App = () => {
                 3: { halign: 'right' },
             }
         });
-        
+
         doc.save(`factura_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura PDF para ${student.name}.`);
     };
-    
+
     // --- INICIO DE CAMBIO: Nueva función para factura del mes siguiente ---
     const handleGenerateNextMonthPDFInvoice = (student: Student) => {
         if (!student) {
@@ -869,39 +869,35 @@ const App = () => {
             return;
         }
 
-        const nextMonthDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+        // --- CORRECCIÓN: Lógica para determinar correctamente los detalles del mes siguiente ---
+        const today = new Date();
+        const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const targetMonth = nextMonthDate.getMonth();
         const targetYear = nextMonthDate.getFullYear();
 
-        let finalInvoice = invoices.find(inv => 
-            inv.childId === student.numericId && 
-            new Date(inv.date).getMonth() === targetMonth && 
-            new Date(inv.date).getFullYear() === targetYear
-        );
+        // Se crea siempre un objeto de factura temporal para asegurar que los datos del PDF son correctos
+        const schedule = schedules.find(s => s.id === student.schedule);
+        if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
+        
+        const baseFee = schedule.price;
+        const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+        const totalAmount = baseFee + extendedScheduleFee;
+        const nextMonthDateString = new Date(targetYear, targetMonth, 1).toISOString().split('T')[0];
 
-        if (!finalInvoice) {
-            const schedule = schedules.find(s => s.id === student.schedule);
-            if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
-            
-            const baseFee = schedule.price;
-            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
-            const totalAmount = baseFee + extendedScheduleFee;
-            const nextMonthDateString = new Date(targetYear, targetMonth, 1).toISOString().split('T')[0];
-
-            finalInvoice = {
-                id: 'temp_next',
-                numericId: Date.now(),
-                childId: student.numericId,
-                childName: `${student.name} ${student.surname}`,
-                date: nextMonthDateString,
-                amount: totalAmount,
-                base: baseFee,
-                penalties: 0,
-                enrollmentFeeIncluded: false,
-                status: 'Pendiente',
-                extendedScheduleFee,
-            };
-        }
+        // Usamos este objeto 'finalInvoice' para rellenar el PDF
+        const finalInvoice: Invoice = {
+            id: 'temp_next',
+            numericId: Date.now(),
+            childId: student.numericId,
+            childName: `${student.name} ${student.surname}`,
+            date: nextMonthDateString,
+            amount: totalAmount,
+            base: baseFee,
+            penalties: 0,
+            enrollmentFeeIncluded: false,
+            status: 'Pendiente',
+            extendedScheduleFee,
+        };
 
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
@@ -915,7 +911,10 @@ const App = () => {
         doc.text("CIF: B21898341", 20, 45);
         doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
         doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
-        doc.text(`Fecha: ${new Date(finalInvoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        
+        // --- CORRECCIÓN 1: Usar la fecha actual para la fecha de emisión ---
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        
         doc.setDrawColor(220, 220, 220);
         doc.rect(15, 60, 180, 25); 
         doc.setFont('Helvetica', 'bold');
@@ -928,7 +927,8 @@ const App = () => {
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
         
-        let conceptText = `Jardín de infancia (${new Date(finalInvoice.date).toLocaleString('es-ES', { month: 'long' })})`;
+        // --- CORRECCIÓN 2: Usar la fecha del mes siguiente (bien calculada) para el concepto ---
+        let conceptText = `Jardín de infancia (${nextMonthDate.toLocaleString('es-ES', { month: 'long' })})`;
         tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
         
         if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
@@ -987,11 +987,11 @@ const App = () => {
           case 'calendario':
               return <CalendarView attendance={attendance} />;
           case 'facturacion':
-              return <Invoicing 
-                  invoices={invoices} 
-                  onUpdateStatus={handleUpdateInvoiceStatus} 
-                  config={config} 
-                  onExport={() => handleExport('facturacion')} 
+              return <Invoicing
+                  invoices={invoices}
+                  onUpdateStatus={handleUpdateInvoiceStatus}
+                  config={config}
+                  onExport={() => handleExport('facturacion')}
                   students={children}
                   onGeneratePastInvoice={handleGeneratePDFInvoice}
                   onDeleteInvoice={handleDeleteInvoice}
@@ -1019,9 +1019,9 @@ const App = () => {
   return (
     <>
       <div style={styles.notificationContainer}>{notifications.map(n => <Notification key={n.id} message={n.message} onClose={() => setNotifications(p => p.filter(item => item.id !== n.id))} />)}</div>
-      
+
       {confirmModal.isOpen && (
-          <ConfirmModal 
+          <ConfirmModal
               message={confirmModal.message}
               onConfirm={confirmModal.onConfirm}
               onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} })}
@@ -1029,10 +1029,10 @@ const App = () => {
       )}
 
       {/* --- INICIO DE CAMBIO: Pasar la nueva prop al modal --- */}
-      {selectedChild && <StudentDetailModal 
-          student={selectedChild} 
-          onClose={() => setSelectedChild(null)} 
-          schedules={schedules} 
+      {selectedChild && <StudentDetailModal
+          student={selectedChild}
+          onClose={() => setSelectedChild(null)}
+          schedules={schedules}
           onViewPersonalCalendar={(student) => {
               setSelectedChild(null);
               setViewingCalendarForStudent(student);
@@ -1044,7 +1044,7 @@ const App = () => {
           currentUser={currentUser}
       />}
       {/* --- FIN DE CAMBIO --- */}
-      
+
       {viewingCalendarForStudent && <StudentPersonalCalendar
           student={viewingCalendarForStudent}
           onClose={() => setViewingCalendarForStudent(null)}
@@ -1056,7 +1056,7 @@ const App = () => {
         <aside style={styles.sidebar}>
           <div>
             <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
-            
+
             <h2 style={styles.sidebarTitle}>General</h2>
             {[
               { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 },
