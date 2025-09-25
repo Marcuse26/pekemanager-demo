@@ -15,8 +15,10 @@ interface StudentDetailModalProps {
     onGenerateAndExportInvoice: (student: Student) => void;
     onGenerateAndExportNextMonthInvoice: (student: Student) => void;
     currentUser: string;
-    invoices: Invoice[]; // Prop para recibir las facturas
-    onGeneratePastMonthsInvoice: (student: Student) => void; // Prop para la nueva función
+    // --- INICIO DE CAMBIO: Props añadidas ---
+    invoices: Invoice[];
+    onGeneratePastMonthsInvoice: (student: Student) => void;
+    // --- FIN DE CAMBIO ---
 }
 
 const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateAndExportInvoice, onGenerateAndExportNextMonthInvoice, currentUser, invoices, onGeneratePastMonthsInvoice }: StudentDetailModalProps) => {
@@ -183,7 +185,6 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                     )}
                 </div>
 
-                {/* --- INICIO DE CAMBIO: Botones de exportación actualizados --- */}
                 <div style={{display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap'}}>
                      <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, flex: 1}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
                      <button onClick={() => onGenerateAndExportInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
@@ -194,7 +195,6 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                         <button onClick={() => onGeneratePastMonthsInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#ffc107'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Meses Anteriores</button>
                      )}
                 </div>
-                {/* --- FIN DE CAMBIO --- */}
 
             </div>
         </div>

@@ -12,7 +12,8 @@ interface InvoicingProps {
     students: Student[];
     onGeneratePastInvoice: (student: Student, invoice: Invoice) => void;
     onDeleteInvoice: (invoice: Invoice) => void;
-    onGeneratePastMonthsInvoice: (student: Student) => void; // Se mantiene la prop por si se usa en otro lugar
+    // Se añade la nueva prop aunque no se use directamente aquí, para mantener consistencia
+    onGeneratePastMonthsInvoice: (student: Student) => void;
 }
 
 // Lógica de fecha para filtrar (constantes globales)
@@ -29,23 +30,19 @@ const Invoicing = ({
     onDeleteInvoice
 }: InvoicingProps) => {
 
-    // Estado con 3 opciones
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => { onUpdateStatus(invoiceId, newStatus); };
 
-    // El useMemo ahora clasifica en TRES listas, basándose en el estado del alumno
     const { activeInvoices, pastInvoices, otherInvoices } = useMemo(() => {
         const active: Invoice[] = [];
         const past: Invoice[] = [];
-        const other: Invoice[] = []; // Nueva lista
+        const other: Invoice[] = [];
 
-        // Definiciones de Fecha
         const firstDayThisMonth = new Date(currentYear, currentMonth, 1);
         const lastDayThisMonth = new Date(currentYear, currentMonth + 1, 0);
 
-        // --- Helpers de Estado de Alumno ---
         const isStudentActiveThisMonth = (student: Student): boolean => {
             if (!student.startMonth) return false;
             const startDate = new Date(student.startMonth);
@@ -58,9 +55,8 @@ const Invoicing = ({
         const isStudentInactivePast = (student: Student): boolean => {
             if (!student.plannedEndMonth) return false;
             const endDate = new Date(student.plannedEndMonth);
-            return endDate < firstDayThisMonth; // Baja es anterior a este mes
+            return endDate < firstDayThisMonth;
         }
-        // --- Fin Helpers ---
 
         for (const inv of invoices) {
             const student = students.find(s => s.numericId === inv.childId);
