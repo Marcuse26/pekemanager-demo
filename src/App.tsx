@@ -214,7 +214,7 @@ const App = () => {
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]);
 
   const handleExport = (dataType: string) => {
-    // Logic for exporting data to CSV. No changes needed here.
+      // Logic for exporting data to CSV. No changes needed here.
   };
 
   const handleLogin = (username: string) => {
@@ -651,4 +651,3 @@ const App = () => {
 };
 
 export default App;
-
