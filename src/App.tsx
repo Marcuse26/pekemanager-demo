@@ -52,31 +52,23 @@ import Help from './components/tabs/Help';
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN (EL "SHELL" O CONTENEDOR) ---
 const App = () => {
   
-  // --- Login Persistente ---
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return sessionStorage.getItem('isLoggedIn') === 'true';
-  });
-  const [currentUser, setCurrentUser] = useState<string>(() => {
-    return sessionStorage.getItem('currentUser') || 'invitado';
-  });
-  
+  // --- Estados de la Aplicación ---
+  const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
+  const [currentUser, setCurrentUser] = useState<string>(() => sessionStorage.getItem('currentUser') || 'invitado');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedChild, setSelectedChild] = useState<Student | null>(null);
   const [viewingCalendarForStudent, setViewingCalendarForStudent] = useState<Student | null>(null);
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => {} });
   const [isLoading, setIsLoading] = useState(true);
-
   const [userId, setUserId] = useState<string | null>(null);
   const appId = 'pekemanager-app';
 
-  // --- DATOS Y ESTADO GLOBAL ---
+  // --- Datos de Firestore ---
   const [config, setConfig] = useState<Config>({ centerName: 'mi pequeño recreo', currency: '€', lateFee: 6 });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [children, setChildren] = useState<Student[]>([]);
-  // --- INICIO DE CAMBIO: Estado inicial del formulario ---
   const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
-  // --- FIN DE CAMBIO ---
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [appHistory, setAppHistory] = useState<AppHistoryLog[]>([]);
@@ -154,7 +146,7 @@ const App = () => {
         user,
         action,
         details,
-        timestamp: new Date().toISOString(), // Guardar como ISO
+        timestamp: new Date().toISOString(),
     };
     try {
         const historyCollectionPath = `/artifacts/${appId}/public/data/appHistory`;
@@ -168,11 +160,11 @@ const App = () => {
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
-    const month = new Date().getMonth();
-    const year = new Date().getFullYear();
+    const currentBillingMonth = new Date().getMonth();
+    const currentBillingYear = new Date().getFullYear();
 
-    const firstDayThisMonth = new Date(year, month, 1);
-    const lastDayThisMonth = new Date(year, month + 1, 0);
+    const firstDayThisMonth = new Date(currentBillingYear, currentBillingMonth, 1);
+    const lastDayThisMonth = new Date(currentBillingYear, currentBillingMonth + 1, 0);
 
     const isStudentActiveThisMonth = (student: Student): boolean => {
         if (!student.startMonth) return false;
@@ -185,32 +177,49 @@ const App = () => {
 
     const runSilentInvoiceUpdate = async () => {
         for (const child of children) {
-
-            if (!isStudentActiveThisMonth(child)) {
-                continue; 
-            }
+            if (!isStudentActiveThisMonth(child)) continue;
 
             const schedule = schedules.find(s => s.id === child.schedule);
             if (!schedule) continue;
 
+            // --- INICIO NUEVA LÓGICA DE CÁLCULO DE CUOTA BASE ---
+            let baseFee = schedule.price;
+            let conceptDescription = `Jardín de infancia (${firstDayThisMonth.toLocaleString('es-ES', { month: 'long' })})`;
+
+            if (child.startMonth && child.plannedEndMonth) {
+                const startDate = new Date(child.startMonth);
+                const endDate = new Date(child.plannedEndMonth);
+                
+                const stayDurationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
+
+                if (stayDurationDays < 28) {
+                    const weeks = Math.ceil(stayDurationDays / 7);
+                    baseFee = (schedule.price / 4) * (weeks + 1);
+                    conceptDescription = `Estancia de ${weeks} semana(s)`;
+                } else {
+                    const firstMonthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+                    if (currentBillingYear === startDate.getFullYear() && currentBillingMonth === startDate.getMonth()) {
+                        baseFee = schedule.price; // Primer mes completo
+                    } else if (currentBillingYear === endDate.getFullYear() && currentBillingMonth === endDate.getMonth()) {
+                        const daysInLastMonth = endDate.getDate();
+                        const weeks = Math.ceil(daysInLastMonth / 7);
+                        baseFee = (schedule.price / 4) * (weeks + 1);
+                        conceptDescription = `Estancia de ${weeks} semana(s) (mes final)`;
+                    }
+                }
+            }
+            // --- FIN NUEVA LÓGICA DE CÁLCULO DE CUOTA BASE ---
+
             const childPenalties = penalties.filter(p => 
                 p.childId === child.numericId && 
-                new Date(p.date).getMonth() === month && 
-                new Date(p.date).getFullYear() === year
+                new Date(p.date).getMonth() === currentBillingMonth && 
+                new Date(p.date).getFullYear() === currentBillingYear
             );
             const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
-            
-            // --- INICIO DE CAMBIO: Aplicar suplemento de horario ampliado ---
             const extendedScheduleFee = child.extendedSchedule ? 30 : 0;
-            let totalAmount = schedule.price + totalPenalties + extendedScheduleFee;
-            // --- FIN DE CAMBIO ---
-            
-            let enrollmentFeeApplied = false;
-            
-            if (!child.enrollmentPaid) { 
-                totalAmount += 100;
-                enrollmentFeeApplied = true;
-            }
+            let totalAmount = baseFee + totalPenalties + extendedScheduleFee;
+            let enrollmentFeeApplied = !child.enrollmentPaid;
+            if (enrollmentFeeApplied) totalAmount += 100;
             
             const invoiceData: Omit<Invoice, 'id' | 'status'> = {
                 numericId: Date.now() + child.numericId,
@@ -218,31 +227,23 @@ const App = () => {
                 childName: `${child.name} ${child.surname}`,
                 date: new Date().toISOString().split('T')[0],
                 amount: totalAmount,
-                base: schedule.price,
+                base: baseFee,
                 penalties: totalPenalties,
                 enrollmentFeeIncluded: enrollmentFeeApplied,
-                // --- INICIO DE CAMBIO ---
                 extendedScheduleFee,
-                // --- FIN DE CAMBIO ---
             };
 
             const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
             const existingInvoice = invoices.find(inv => 
                 inv.childId === child.numericId && 
-                new Date(inv.date).getMonth() === month && 
-                new Date(inv.date).getFullYear() === year
+                new Date(inv.date).getMonth() === currentBillingMonth && 
+                new Date(inv.date).getFullYear() === currentBillingYear
             );
             
             try {
                 if (existingInvoice) {
-                    if (existingInvoice.amount !== invoiceData.amount || 
-                        existingInvoice.base !== invoiceData.base || 
-                        existingInvoice.penalties !== invoiceData.penalties ||
-                        existingInvoice.enrollmentFeeIncluded !== invoiceData.enrollmentFeeIncluded ||
-                        // --- INICIO DE CAMBIO ---
-                        existingInvoice.extendedScheduleFee !== invoiceData.extendedScheduleFee
-                        // --- FIN DE CAMBIO ---
-                    ) {
+                    // Solo actualiza si hay cambios para evitar escrituras innecesarias
+                    if (existingInvoice.amount !== invoiceData.amount || existingInvoice.base !== invoiceData.base) {
                         await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
                             ...invoiceData,
                             numericId: existingInvoice.numericId,
@@ -265,8 +266,8 @@ const App = () => {
 
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
   // --- FIN DE CAMBIO ---
-
-  // ... (código de handleExport, login y logout sin cambios) ...
+  
+  // ... (resto de handlers sin cambios hasta la generación de facturas) ...
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
 
@@ -475,7 +476,6 @@ const App = () => {
     }
   };
 
-  // ... (resto de handlers sin cambios hasta la generación de facturas) ...
   const handleDeleteChild = (childId: string, name: string) => { 
       const onConfirmDelete = async () => {
           if (!userId) return;
@@ -738,70 +738,70 @@ const App = () => {
 
   // --- INICIO DE CAMBIO: Lógica para generar factura individual ---
   const handleGenerateAndExportInvoice = async (student: Student) => {
-        const month = new Date().getMonth();
-        const year = new Date().getFullYear();
-        let invoiceToExport = invoices.find(inv => inv.childId === student.numericId && new Date(inv.date).getMonth() === month && new Date(inv.date).getFullYear() === year);
+    // ... (la lógica es muy similar a la de useEffect, pero para un solo alumno y mes actual)
+    handleGeneratePDFInvoice(student, undefined); // Se simplifica para llamar siempre a la de PDF, que tiene la lógica completa
+  };
+  // --- FIN DE CAMBIO ---
 
-        if (!invoiceToExport) {
-            addNotification("No se encontró factura del mes actual. Generando una nueva...");
+    // --- INICIO DE CAMBIO: Lógica para generar PDF de factura ---
+    const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
+        if (!student) {
+            addNotification("Error: No se ha seleccionado un alumno.");
+            return;
+        }
+
+        const currentBillingMonth = new Date().getMonth();
+        const currentBillingYear = new Date().getFullYear();
+
+        // Si no se pasa una factura, se busca o genera la del mes actual
+        let finalInvoice = invoice;
+        if (!finalInvoice) {
+            finalInvoice = invoices.find(inv => 
+                inv.childId === student.numericId && 
+                new Date(inv.date).getMonth() === currentBillingMonth && 
+                new Date(inv.date).getFullYear() === currentBillingYear
+            );
+        }
+
+        if (!finalInvoice) {
+            addNotification("No se encontró factura. Se generará una nueva para el mes actual.");
+            // Lógica duplicada de useEffect para generar una factura al momento
             const schedule = schedules.find(s => s.id === student.schedule);
-            if (!schedule) {
-                addNotification("Error: El alumno no tiene un horario asignado.");
-                return;
-            }
-            const childPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === month && new Date(p.date).getFullYear() === year);
-            const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
+            if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
             
-            // --- INICIO DE CAMBIO: Aplicar suplemento de horario ampliado ---
-            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
-            let totalAmount = schedule.price + totalPenalties + extendedScheduleFee;
-            // --- FIN DE CAMBIO ---
-
-            let enrollmentFeeApplied = false;
-            if (!student.enrollmentPaid) { 
-                totalAmount += 100; 
-                enrollmentFeeApplied = true;
+            let baseFee = schedule.price;
+            if (student.startMonth && student.plannedEndMonth) {
+                const startDate = new Date(student.startMonth);
+                const endDate = new Date(student.plannedEndMonth);
+                const stayDurationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
+                if (stayDurationDays < 28) {
+                    const weeks = Math.ceil(stayDurationDays / 7);
+                    baseFee = (schedule.price / 4) * (weeks + 1);
+                }
             }
 
-            const newInvoiceData: Omit<Invoice, 'id'> = {
-                numericId: Date.now() + student.numericId,
+            const totalPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === currentBillingMonth && new Date(p.date).getFullYear() === currentBillingYear).reduce((sum, p) => sum + p.amount, 0);
+            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+            const enrollmentFee = !student.enrollmentPaid ? 100 : 0;
+            const totalAmount = baseFee + totalPenalties + extendedScheduleFee + enrollmentFee;
+
+            finalInvoice = {
+                id: 'temp',
+                numericId: Date.now(),
                 childId: student.numericId,
                 childName: `${student.name} ${student.surname}`,
                 date: new Date().toISOString().split('T')[0],
                 amount: totalAmount,
-                base: schedule.price,
+                base: baseFee,
                 penalties: totalPenalties,
-                enrollmentFeeIncluded: enrollmentFeeApplied,
+                enrollmentFeeIncluded: !student.enrollmentPaid,
                 status: 'Pendiente',
-                // --- INICIO DE CAMBIO ---
                 extendedScheduleFee,
-                // --- FIN DE CAMBIO ---
             };
-            
-            try {
-                const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
-                const docRef = await addDoc(collection(db, invoicesCollectionPath), newInvoiceData);
-                invoiceToExport = { ...newInvoiceData, id: docRef.id }; 
-                addAppHistoryLog(currentUser, 'Factura Individual', `Generada factura para ${student.name}`);
-            } catch (error) {
-                addNotification("Error al crear la nueva factura.");
-                console.error("Error creating new invoice:", error);
-                return;
-            }
-        }
-        
-        handleGeneratePDFInvoice(student, invoiceToExport);
-    };
-    // --- FIN DE CAMBIO ---
-
-    // --- INICIO DE CAMBIO: Lógica para generar PDF de factura ---
-    const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
-        if (!student || !invoice) {
-            addNotification("Error: Faltan datos del alumno o de la factura para generar el PDF.");
-            return;
         }
 
         const doc = new jsPDF();
+        // ... (resto del código de generación de PDF, que ahora usa `finalInvoice`) ...
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
         doc.setTextColor('#c55a33');
@@ -812,8 +812,8 @@ const App = () => {
         doc.text("Vision Paideia SLU", 20, 40);
         doc.text("CIF: B21898341", 20, 45);
         doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
-        doc.text(`Factura Nº: ${new Date(invoice.date).getFullYear()}-${String(invoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
-        doc.text(`Fecha: ${new Date(invoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
+        doc.text(`Fecha: ${new Date(finalInvoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
         doc.setDrawColor(220, 220, 220);
         doc.rect(15, 60, 180, 25); 
         doc.setFont('Helvetica', 'bold');
@@ -826,23 +826,31 @@ const App = () => {
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
 
-        if (invoice.enrollmentFeeIncluded) {
+        if (finalInvoice.enrollmentFeeIncluded) {
             tableRows.push(["Matrícula", "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
         }
         
-        tableRows.push([`Jardín de infancia (${new Date(invoice.date).toLocaleString('es-ES', { month: 'long' })})`, "1", `${invoice.base.toFixed(2)} ${config.currency}`, `${invoice.base.toFixed(2)} ${config.currency}`]);
-        
-        // --- INICIO DE CAMBIO: Añadir suplemento a la tabla ---
-        if (invoice.extendedScheduleFee && invoice.extendedScheduleFee > 0) {
-            tableRows.push([`Suplemento Horario Ampliado`, "1", `${invoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${invoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+        let conceptText = `Jardín de infancia (${new Date(finalInvoice.date).toLocaleString('es-ES', { month: 'long' })})`;
+        if (student.startMonth && student.plannedEndMonth) {
+            const startDate = new Date(student.startMonth);
+            const endDate = new Date(student.plannedEndMonth);
+            const stayDurationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
+            if (stayDurationDays < 28) {
+                const weeks = Math.ceil(stayDurationDays / 7);
+                conceptText = `Estancia de ${weeks} semana(s)`;
+            }
         }
-        // --- FIN DE CAMBIO ---
+        tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
         
-        if(invoice.penalties > 0) {
-            tableRows.push([`Penalizaciones por retraso`, "", "", `${invoice.penalties.toFixed(2)} ${config.currency}`]);
+        if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
+            tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
         }
         
-        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${invoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        if(finalInvoice.penalties > 0) {
+            tableRows.push([`Penalizaciones por retraso`, "", "", `${finalInvoice.penalties.toFixed(2)} ${config.currency}`]);
+        }
+        
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
         
         autoTable(doc, {
             startY: 90,
@@ -864,7 +872,7 @@ const App = () => {
             }
         });
         
-        doc.save(`factura_${student.name}_${student.surname}_${invoice.date}.pdf`);
+        doc.save(`factura_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura PDF para ${student.name}.`);
     };
     // --- FIN DE CAMBIO ---
