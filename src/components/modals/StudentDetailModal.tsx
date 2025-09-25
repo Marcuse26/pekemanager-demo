@@ -33,6 +33,8 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
 
     // --- INICIO DE CAMBIO: Lógica para determinar si está activo el próximo mes ---
     const isStudentActiveNextMonth = (student: Student): boolean => {
+        // FIX: Add a null check for student to prevent crash
+        if (!student) return false;
         if (!student.startMonth) return false;
         
         const today = new Date();
