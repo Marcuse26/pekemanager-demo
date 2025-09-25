@@ -340,7 +340,7 @@ const App = () => {
     };
 
   const handleSaveAttendance = async (attendanceData: Omit<Attendance, 'id'>) => {
-    // Logic for saving attendance. No changes needed.
+    // Logic for saving attendance. No changes needed here.
   };
 
     const handleUpdateInvoiceStatus = async (invoiceId: string, newStatus: Invoice['status']) => {
@@ -375,6 +375,7 @@ const App = () => {
         // Logic for updating staff time log. No changes needed.
     };
 
+  // --- INICIO DE CORRECCIÓN: LÓGICA DE PDF RESTAURADA ---
   const handleGenerateAndExportInvoice = (student: Student) => {
     handleGeneratePDFInvoice(student, undefined, new Date());
   };
@@ -494,7 +495,19 @@ const App = () => {
       doc.save(`factura_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
       addNotification(`Generando factura PDF para ${student.name}.`);
   };
+  // --- FIN DE CORRECCIÓN ---
 
+  // --- INICIO DE CORRECCIÓN: MOVER DEFINICIONES DE VARIABLES ---
+  const todayForLog = new Date();
+  const yearForLog = todayForLog.getFullYear();
+  const monthStrForLog = String(todayForLog.getMonth() + 1).padStart(2, '0');
+  const dayStrForLog = String(todayForLog.getDate()).padStart(2, '0');
+  const todayStr_LOCAL = `${yearForLog}-${monthStrForLog}-${dayStrForLog}`;
+
+  const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayStr_LOCAL && log.checkIn && !log.checkOut);
+  const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
+  // --- FIN DE CORRECCIÓN ---
+  
   const renderTabContent = () => {
       switch(activeTab) {
           case 'dashboard':
@@ -549,6 +562,7 @@ const App = () => {
           />
       )}
 
+      {/* --- INICIO DE CORRECCIÓN: AÑADIR PROP FALTANTE --- */}
       {selectedChild && <StudentDetailModal
           student={selectedChild}
           onClose={() => setSelectedChild(null)}
@@ -563,6 +577,7 @@ const App = () => {
           onGenerateAndExportNextMonthInvoice={handleGenerateAndExportNextMonthInvoice}
           currentUser={currentUser}
       />}
+      {/* --- FIN DE CORRECCIÓN --- */}
 
       {viewingCalendarForStudent && <StudentPersonalCalendar
           student={viewingCalendarForStudent}
