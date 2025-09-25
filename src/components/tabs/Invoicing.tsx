@@ -12,22 +12,28 @@ interface InvoicingProps {
     students: Student[];
     onGeneratePastInvoice: (student: Student, invoice: Invoice) => void;
     onDeleteInvoice: (invoice: Invoice) => void;
+    // --- INICIO DE CAMBIO ---
+    onGeneratePastMonthsInvoice: (student: Student) => void;
+    // --- FIN DE CAMBIO ---
 }
 
 // Lógica de fecha para filtrar (constantes globales)
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
 
-const Invoicing = ({ 
-    invoices, 
-    onUpdateStatus, 
-    config, 
-    onExport, 
-    students, 
-    onGeneratePastInvoice, 
-    onDeleteInvoice
+const Invoicing = ({
+    invoices,
+    onUpdateStatus,
+    config,
+    onExport,
+    students,
+    onGeneratePastInvoice,
+    onDeleteInvoice,
+    // --- INICIO DE CAMBIO ---
+    onGeneratePastMonthsInvoice
+    // --- FIN DE CAMBIO ---
 }: InvoicingProps) => {
-    
+
     // Estado con 3 opciones
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +45,7 @@ const Invoicing = ({
         const active: Invoice[] = [];
         const past: Invoice[] = [];
         const other: Invoice[] = []; // Nueva lista
-        
+
         // Definiciones de Fecha
         const firstDayThisMonth = new Date(currentYear, currentMonth, 1);
         const lastDayThisMonth = new Date(currentYear, currentMonth + 1, 0);
@@ -71,17 +77,17 @@ const Invoicing = ({
 
             if (isStudentActiveThisMonth(student)) {
                 active.push(inv);
-            } 
+            }
             else if (isStudentInactivePast(student)) {
                 past.push(inv);
-            } 
+            }
             else {
                 other.push(inv);
             }
         }
-        
+
         active.sort((a, b) => a.childName.localeCompare(b.childName));
-        past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); 
+        past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         other.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return { activeInvoices: active, pastInvoices: past, otherInvoices: other };
@@ -96,9 +102,9 @@ const Invoicing = ({
             alert("Error: No se encontraron los datos del alumno para esta factura.");
         }
     };
-    
+
     const lowerSearchTerm = searchTerm.toLowerCase();
-    let listToRender: Invoice[] = [];
+    let listToRender: (Invoice | { isGroup: true, student: Student })[] = [];
     let placeholderText = "Buscar por nombre de alumno...";
 
     switch (activeSubTab) {
@@ -107,7 +113,16 @@ const Invoicing = ({
             placeholderText = "Buscar en alumnos activos...";
             break;
         case 'pasadas':
-            listToRender = pastInvoices.filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm));
+            const pastStudents = pastInvoices
+                .filter(inv => inv.childName.toLowerCase().includes(lowerSearchTerm))
+                .reduce((acc, inv) => {
+                    const student = students.find(s => s.numericId === inv.childId);
+                    if (student) {
+                        acc[student.id] = student;
+                    }
+                    return acc;
+                }, {} as Record<string, Student>);
+            listToRender = Object.values(pastStudents).map(student => ({ isGroup: true, student }));
             placeholderText = "Buscar en inactivos (anteriores)...";
             break;
         case 'otros':
@@ -123,7 +138,7 @@ const Invoicing = ({
                 <h3 style={{...styles.cardTitle, marginBottom: 0, flexShrink: 0}}>
                     Facturación ({listCount})
                 </h3>
-                
+
                 <input
                     type="text"
                     placeholder={placeholderText}
@@ -133,8 +148,8 @@ const Invoicing = ({
                 />
 
                 {/* --- INICIO DE CAMBIO: Texto del botón --- */}
-                <button 
-                    onClick={onExport} 
+                <button
+                    onClick={onExport}
                     style={{...styles.actionButton, backgroundColor: '#17a2b8', flexShrink: 0}}
                 >
                     <Download size={16} style={{marginRight: '8px'}} />Exportar Facturación
@@ -143,19 +158,19 @@ const Invoicing = ({
             </div>
 
             <div style={styles.subTabContainer}>
-                <button 
+                <button
                     style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('actual'); setSearchTerm(''); }}
                 >
                     Activos ({activeInvoices.length})
                 </button>
-                <button 
+                <button
                     style={{...styles.subTabButton, ...(activeSubTab === 'pasadas' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('pasadas'); setSearchTerm(''); }}
                 >
-                    Inactivos (meses anteriores) ({pastInvoices.length})
+                    Inactivos (meses anteriores) ({Object.keys(pastInvoices.reduce((acc, inv) => ({...acc, [inv.childId]: true }), {})).length})
                 </button>
-                <button 
+                <button
                     style={{...styles.subTabButton, ...(activeSubTab === 'otros' ? styles.subTabButtonActive : {})}}
                     onClick={() => { setActiveSubTab('otros'); setSearchTerm(''); }}
                 >
@@ -165,46 +180,70 @@ const Invoicing = ({
 
 
             <div style={styles.listContainer}>
-                {listToRender.length > 0 ? listToRender.map(inv => (
-                    <div key={inv.id} style={styles.listItem}>
-                        <div>
-                            <p style={styles.listItemName}>{inv.childName}</p>
-                            <p style={styles.listItemInfo}>
-                                Fecha Factura: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
-                            </p>
-                        </div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                            <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>
-                            
-                            <button 
-                                onClick={() => handlePastInvoiceExport(inv)} 
-                                style={{...styles.actionButton, backgroundColor: '#17a2b8', padding: '5px 10px'}}
-                                title="Exportar PDF de esta factura"
-                            >
-                                <FileText size={14} />
-                            </button>
+                {listToRender.length > 0 ? listToRender.map(item => {
+                    if ('isGroup' in item && item.isGroup) {
+                        const { student } = item;
+                        return (
+                            <div key={student.id} style={styles.listItem}>
+                                <div>
+                                    <p style={styles.listItemName}>{student.name} {student.surname}</p>
+                                    <p style={styles.listItemInfo}>
+                                        Alumno inactivo desde {student.plannedEndMonth}
+                                    </p>
+                                </div>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                    <button
+                                        onClick={() => onGeneratePastMonthsInvoice(student)}
+                                        style={{...styles.actionButton, backgroundColor: '#28a745', padding: '5px 10px'}}
+                                        title="Exportar PDF con el total de meses anteriores"
+                                    >
+                                        <FileText size={14} /> Exportar Total Anterior
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+                    const inv = item as Invoice;
+                    return (
+                        <div key={inv.id} style={styles.listItem}>
+                            <div>
+                                <p style={styles.listItemName}>{inv.childName}</p>
+                                <p style={styles.listItemInfo}>
+                                    Fecha Factura: {new Date(inv.date).toLocaleDateString('es-ES')} | Base: {inv.base}{config.currency} + Penaliz: {inv.penalties}{config.currency}
+                                </p>
+                            </div>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>
 
-                            <select 
-                                value={inv.status} 
-                                onChange={(e) => handleStatusChange(inv.id, e.target.value as Invoice['status'])} 
-                                style={styles.formInputSmall}
-                            >
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Pagada">Pagada</option>
-                                <option value="Vencida">Vencida</option>
-                            </select>
-                            
-                            <button 
-                                onClick={() => onDeleteInvoice(inv)} 
-                                style={styles.deleteButton} 
-                                title="Eliminar factura"
-                            >
-                                <Trash2 size={14} />
-                            </button>
+                                <button
+                                    onClick={() => handlePastInvoiceExport(inv)}
+                                    style={{...styles.actionButton, backgroundColor: '#17a2b8', padding: '5px 10px'}}
+                                    title="Exportar PDF de esta factura"
+                                >
+                                    <FileText size={14} />
+                                </button>
 
+                                <select
+                                    value={inv.status}
+                                    onChange={(e) => handleStatusChange(inv.id, e.target.value as Invoice['status'])}
+                                    style={styles.formInputSmall}
+                                >
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="Pagada">Pagada</option>
+                                    <option value="Vencida">Vencida</option>
+                                </select>
+
+                                <button
+                                    onClick={() => onDeleteInvoice(inv)}
+                                    style={styles.deleteButton}
+                                    title="Eliminar factura"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )) : <p>No hay facturas que coincidan con los filtros.</p>}
+                    );
+                }) : <p>No hay facturas que coincidan con los filtros.</p>}
             </div>
         </div>
     );

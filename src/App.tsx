@@ -878,7 +878,7 @@ const App = () => {
         // Se crea siempre un objeto de factura temporal para asegurar que los datos del PDF son correctos
         const schedule = schedules.find(s => s.id === student.schedule);
         if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
-        
+
         const baseFee = schedule.price;
         const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
         const totalAmount = baseFee + extendedScheduleFee;
@@ -911,12 +911,12 @@ const App = () => {
         doc.text("CIF: B21898341", 20, 45);
         doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
         doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
-        
+
         // --- CORRECCIÓN 1: Usar la fecha actual para la fecha de emisión ---
         doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
-        
+
         doc.setDrawColor(220, 220, 220);
-        doc.rect(15, 60, 180, 25); 
+        doc.rect(15, 60, 180, 25);
         doc.setFont('Helvetica', 'bold');
         doc.text("Cliente:", 20, 66);
         doc.setFont('Helvetica', 'normal');
@@ -926,17 +926,17 @@ const App = () => {
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
-        
+
         // --- CORRECCIÓN 2: Usar la fecha del mes siguiente (bien calculada) para el concepto ---
         let conceptText = `Jardín de infancia (${nextMonthDate.toLocaleString('es-ES', { month: 'long' })})`;
         tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
-        
+
         if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
             tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
         }
-        
+
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
-        
+
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -956,9 +956,82 @@ const App = () => {
                 3: { halign: 'right' },
             }
         });
-        
+
         doc.save(`factura_adelantada_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura del próximo mes para ${student.name}.`);
+    };
+    // --- FIN DE CAMBIO ---
+
+    // --- INICIO DE CAMBIO: Nueva función para factura de meses anteriores ---
+    const handleGeneratePastMonthsInvoice = (student: Student) => {
+        const today = new Date();
+        const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        const pastInvoices = invoices.filter(inv =>
+            inv.childId === student.numericId &&
+            new Date(inv.date) < firstDayThisMonth
+        );
+
+        if (pastInvoices.length === 0) {
+            addNotification(`No se encontraron facturas de meses anteriores para ${student.name}.`);
+            return;
+        }
+
+        const totalAmount = pastInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+        const doc = new jsPDF();
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(32);
+        doc.setTextColor('#c55a33');
+        doc.text("mi pequeño recreo", 105, 22, { align: 'center' });
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Vision Paideia SLU", 20, 40);
+        doc.text("CIF: B21898341", 20, 45);
+        doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
+        doc.text(`Factura Nº: ${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, 190, 40, { align: 'right' });
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        doc.setDrawColor(220, 220, 220);
+        doc.rect(15, 60, 180, 25);
+        doc.setFont('Helvetica', 'bold');
+        doc.text("Cliente:", 20, 66);
+        doc.setFont('Helvetica', 'normal');
+        const clientName = student.accountHolderName || `${student.fatherName || ''} ${student.motherName || ''}`.trim();
+        doc.text(`Nombre y apellidos: ${clientName}`, 20, 72);
+        doc.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78);
+        doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
+        const tableColumn = ["Concepto", "Importe"];
+        const tableRows = [];
+
+        pastInvoices.forEach(inv => {
+            const monthName = new Date(inv.date).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+            tableRows.push([`Cuota de ${monthName}`, `${inv.amount.toFixed(2)} ${config.currency}`]);
+        });
+
+        tableRows.push([{ content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+
+        autoTable(doc, {
+            startY: 90,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+            didDrawPage: (data: any) => {
+                doc.setFontSize(10);
+                doc.text(`Forma de pago: ${student.paymentMethod}`, data.settings.margin.left, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 25);
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(18);
+                doc.setTextColor('#c55a33');
+                doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
+            },
+            columnStyles: {
+                1: { halign: 'right' },
+            }
+        });
+
+        doc.save(`factura_total_anterior_${student.name}_${student.surname}.pdf`);
+        addNotification(`Generando factura total anterior para ${student.name}.`);
     };
     // --- FIN DE CAMBIO ---
 
@@ -995,6 +1068,7 @@ const App = () => {
                   students={children}
                   onGeneratePastInvoice={handleGeneratePDFInvoice}
                   onDeleteInvoice={handleDeleteInvoice}
+                  onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice}
               />;
           case 'penalizaciones':
               return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
