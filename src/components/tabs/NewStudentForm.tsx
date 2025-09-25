@@ -12,11 +12,9 @@ interface NewStudentFormProps {
     schedules: Schedule[];
 }
 
-// Lógica del componente (copiada de tu App.tsx original)
+// Lógica del componente
 const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewStudentFormProps) => {
   
-  // Este componente no tiene estado propio (lo recibe todo por props), 
-  // pero sí necesita esta función interna para comunicar los cambios al componente App.
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => { 
       const { name, value, type } = e.target; 
       const isCheckbox = type === 'checkbox'; 
@@ -56,13 +54,16 @@ const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewS
                     <option value="Transferencia">Transferencia</option>
                     <option value="Domiciliación">Domiciliación Bancaria</option>
                 </select>
-                <input name="accountHolderName" value={childForm.accountHolderName} onChange={handleInputChange} placeholder="Titular de la cuenta bancaria" style={{...styles.formInput, gridColumn: '1 / -1'}} />
-                 <input name="nif" value={childForm.nif || ''} onChange={handleInputChange} placeholder="NIF/DNI del Titular" style={{...styles.formInput, gridColumn: '1 / -1'}} />
+                
+                {/* --- INICIO DE CAMBIOS --- */}
+                <input name="accountHolderName" value={childForm.accountHolderName} onChange={handleInputChange} placeholder="Titular de la cuenta bancaria" style={{...styles.formInput, gridColumn: '1 / -1'}} required />
+                <input name="nif" value={childForm.nif || ''} onChange={handleInputChange} placeholder="NIF/DNI del Titular" style={{...styles.formInput, gridColumn: '1 / -1'}} required />
+                {/* --- FIN DE CAMBIOS --- */}
+
                 <input name="authorizedPickup" value={childForm.authorizedPickup} onChange={handleInputChange} placeholder="Personas autorizadas para la recogida" style={{...styles.formInput, gridColumn: '1 / -1'}} />
             </div>
             <textarea name="allergies" value={childForm.allergies} onChange={handleInputChange} placeholder="Alergias y notas médicas..." style={{...styles.formInput, width: 'calc(100% - 24px)', gridColumn: '1 / -1'}} rows={3}></textarea>
             
-            {/* --- INICIO DE CAMBIOS --- */}
             <div style={{gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px'}}>
                 <label style={styles.checkboxLabel}>
                     <input type="checkbox" name="enrollmentPaid" checked={childForm.enrollmentPaid} onChange={handleInputChange} /> Matrícula Pagada (100€)
@@ -71,7 +72,6 @@ const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewS
                     <input type="checkbox" name="extendedSchedule" checked={childForm.extendedSchedule} onChange={handleInputChange} /> Horario Ampliado (7:45) (+30€)
                 </label>
             </div>
-            {/* --- FIN DE CAMBIOS --- */}
             
             <button type="submit" style={{...styles.submitButton, gridColumn: '1 / -1'}}>Inscribir Alumno</button>
         </form>
