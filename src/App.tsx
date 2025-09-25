@@ -156,7 +156,6 @@ const App = () => {
     }
   }, [userId, appId]);
 
-  // --- INICIO DE CAMBIO: Lógica de Facturación Automática ---
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
@@ -182,9 +181,7 @@ const App = () => {
             const schedule = schedules.find(s => s.id === child.schedule);
             if (!schedule) continue;
 
-            // --- INICIO NUEVA LÓGICA DE CÁLCULO DE CUOTA BASE ---
             let baseFee = schedule.price;
-            let conceptDescription = `Jardín de infancia (${firstDayThisMonth.toLocaleString('es-ES', { month: 'long' })})`;
 
             if (child.startMonth && child.plannedEndMonth) {
                 const startDate = new Date(child.startMonth);
@@ -195,20 +192,14 @@ const App = () => {
                 if (stayDurationDays < 28) {
                     const weeks = Math.ceil(stayDurationDays / 7);
                     baseFee = (schedule.price / 4) * (weeks + 1);
-                    conceptDescription = `Estancia de ${weeks} semana(s)`;
                 } else {
-                    const firstMonthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-                    if (currentBillingYear === startDate.getFullYear() && currentBillingMonth === startDate.getMonth()) {
-                        baseFee = schedule.price; // Primer mes completo
-                    } else if (currentBillingYear === endDate.getFullYear() && currentBillingMonth === endDate.getMonth()) {
+                    if (currentBillingYear === endDate.getFullYear() && currentBillingMonth === endDate.getMonth()) {
                         const daysInLastMonth = endDate.getDate();
                         const weeks = Math.ceil(daysInLastMonth / 7);
                         baseFee = (schedule.price / 4) * (weeks + 1);
-                        conceptDescription = `Estancia de ${weeks} semana(s) (mes final)`;
                     }
                 }
             }
-            // --- FIN NUEVA LÓGICA DE CÁLCULO DE CUOTA BASE ---
 
             const childPenalties = penalties.filter(p => 
                 p.childId === child.numericId && 
@@ -242,7 +233,6 @@ const App = () => {
             
             try {
                 if (existingInvoice) {
-                    // Solo actualiza si hay cambios para evitar escrituras innecesarias
                     if (existingInvoice.amount !== invoiceData.amount || existingInvoice.base !== invoiceData.base) {
                         await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
                             ...invoiceData,
@@ -265,12 +255,9 @@ const App = () => {
     runSilentInvoiceUpdate();
 
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
-  // --- FIN DE CAMBIO ---
   
-  // ... (resto de handlers sin cambios hasta la generación de facturas) ...
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -347,7 +334,6 @@ const App = () => {
             dataToExport = currentMonthActiveInvoices.map(i => ({
                 Factura_ID: i.numericId,
                 Alumno: i.childName,
-                // Fecha: i.date, // Omitida
                 Base: i.base,
                 Penalizaciones: i.penalties,
                 Importe_Total: i.amount,
@@ -382,25 +368,19 @@ const App = () => {
         case 'historial':
             const parseTimestamp = (timestamp: string): number => {
                 if (!timestamp) return 0;
-                if (timestamp.includes('T') && timestamp.includes('Z')) {
-                    return new Date(timestamp).getTime();
-                }
+                if (timestamp.includes('T') && timestamp.includes('Z')) return new Date(timestamp).getTime();
                 if (timestamp.includes('/') && timestamp.includes(',')) {
                     try {
                         const [datePart, timePart] = timestamp.split(', ');
                         const [day, month, year] = datePart.split('/').map(Number);
                         const [hour, minute, second] = timePart.split(':').map(Number);
                         return new Date(year, month - 1, day, hour, minute, second).getTime();
-                    } catch (e) {
-                        return 0;
-                    }
+                    } catch (e) { return 0; }
                 }
                 return new Date(timestamp).getTime();
             };
 
-            const sortedHistory = [...appHistory].sort((a, b) => 
-                parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp)
-            );
+            const sortedHistory = [...appHistory].sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
             
             dataToExport = sortedHistory.map(h => ({
                 Fecha: h.timestamp ? new Date(parseTimestamp(h.timestamp)).toLocaleString('es-ES') : 'N/A',
@@ -464,9 +444,7 @@ const App = () => {
     try {
         const childrenCollectionPath = `/artifacts/${appId}/public/data/children`;
         await addDoc(collection(db, childrenCollectionPath), newChild);
-        // --- INICIO DE CAMBIO: Limpiar el formulario ---
         setChildForm({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
-        // --- FIN DE CAMBIO ---
         addNotification(`Alumno ${newChild.name} inscrito con éxito.`);
         addAppHistoryLog(currentUser, 'Inscripción', `Se ha inscrito al nuevo alumno: ${newChild.name} ${newChild.surname}.`);
         setActiveTab('alumnos');
@@ -736,39 +714,48 @@ const App = () => {
         }
     };
 
-  // --- INICIO DE CAMBIO: Lógica para generar factura individual ---
   const handleGenerateAndExportInvoice = async (student: Student) => {
-    // ... (la lógica es muy similar a la de useEffect, pero para un solo alumno y mes actual)
-    handleGeneratePDFInvoice(student, undefined); // Se simplifica para llamar siempre a la de PDF, que tiene la lógica completa
+    handleGeneratePDFInvoice(student, undefined);
   };
-  // --- FIN DE CAMBIO ---
 
-    // --- INICIO DE CAMBIO: Lógica para generar PDF de factura ---
+    // --- INICIO DE CAMBIO: Lógica de generación de PDF actualizada ---
     const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
         if (!student) {
             addNotification("Error: No se ha seleccionado un alumno.");
             return;
         }
 
-        const currentBillingMonth = new Date().getMonth();
-        const currentBillingYear = new Date().getFullYear();
-
-        // Si no se pasa una factura, se busca o genera la del mes actual
         let finalInvoice = invoice;
+
+        // Si no se pasa una factura (ej: desde la ficha del alumno), la buscamos o la creamos
         if (!finalInvoice) {
+            let targetMonth = new Date().getMonth();
+            let targetYear = new Date().getFullYear();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (student.startMonth) {
+                const startDate = new Date(student.startMonth);
+                startDate.setHours(0,0,0,0);
+                // Si el alumno empieza en un mes futuro, la factura se genera para ese mes
+                if (startDate > today && startDate.getMonth() > today.getMonth()) {
+                    targetMonth = startDate.getMonth();
+                    targetYear = startDate.getFullYear();
+                }
+            }
+
             finalInvoice = invoices.find(inv => 
                 inv.childId === student.numericId && 
-                new Date(inv.date).getMonth() === currentBillingMonth && 
-                new Date(inv.date).getFullYear() === currentBillingYear
+                new Date(inv.date).getMonth() === targetMonth && 
+                new Date(inv.date).getFullYear() === targetYear
             );
         }
 
         if (!finalInvoice) {
-            addNotification("No se encontró factura. Se generará una nueva para el mes actual.");
-            // Lógica duplicada de useEffect para generar una factura al momento
             const schedule = schedules.find(s => s.id === student.schedule);
             if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
             
+            // Re-calculamos la cuota base aplicando la nueva lógica
             let baseFee = schedule.price;
             if (student.startMonth && student.plannedEndMonth) {
                 const startDate = new Date(student.startMonth);
@@ -779,8 +766,8 @@ const App = () => {
                     baseFee = (schedule.price / 4) * (weeks + 1);
                 }
             }
-
-            const totalPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === currentBillingMonth && new Date(p.date).getFullYear() === currentBillingYear).reduce((sum, p) => sum + p.amount, 0);
+            
+            const totalPenalties = 0; // No se calculan penalizaciones para facturas generadas al momento
             const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
             const enrollmentFee = !student.enrollmentPaid ? 100 : 0;
             const totalAmount = baseFee + totalPenalties + extendedScheduleFee + enrollmentFee;
@@ -790,7 +777,7 @@ const App = () => {
                 numericId: Date.now(),
                 childId: student.numericId,
                 childName: `${student.name} ${student.surname}`,
-                date: new Date().toISOString().split('T')[0],
+                date: student.startMonth || new Date().toISOString().split('T')[0],
                 amount: totalAmount,
                 base: baseFee,
                 penalties: totalPenalties,
@@ -801,7 +788,6 @@ const App = () => {
         }
 
         const doc = new jsPDF();
-        // ... (resto del código de generación de PDF, que ahora usa `finalInvoice`) ...
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
         doc.setTextColor('#c55a33');
@@ -879,6 +865,7 @@ const App = () => {
 
 
   // --- RENDERIZADO PRINCIPAL (EL SHELL) ---
+  // ... (código de renderizado sin cambios) ...
   const todayForLog = new Date();
   const yearForLog = todayForLog.getFullYear();
   const monthStrForLog = String(todayForLog.getMonth() + 1).padStart(2, '0');
