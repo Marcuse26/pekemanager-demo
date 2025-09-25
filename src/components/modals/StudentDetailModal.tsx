@@ -84,10 +84,8 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                         <h3 style={styles.modalSectionTitle}>Datos Personales</h3>
                         <p><strong>F. Nacimiento:</strong> {isEditing ? <input type="date" name="birthDate" value={editedStudent.birthDate} onChange={handleInputChange} style={styles.formInputSmall}/> : student.birthDate}</p>
                         
-                        {/* --- INICIO DE CAMBIOS --- */}
                         <p><strong>Fecha Alta:</strong> {isEditing ? <input type="date" name="startMonth" value={editedStudent.startMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.startMonth || 'No especificada'}</p>
                         <p><strong>Fecha Baja:</strong> {isEditing ? <input type="date" name="plannedEndMonth" value={editedStudent.plannedEndMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.plannedEndMonth || 'No especificada'}</p>
-                        {/* --- FIN DE CAMBIOS --- */}
 
                         <p><strong>Dirección:</strong> {isEditing ? <input type="text" name="address" value={editedStudent.address} onChange={handleInputChange} style={styles.formInputSmall}/> : student.address}</p>
                         <p><strong>Alergias:</strong> {isEditing ? <textarea name="allergies" value={editedStudent.allergies} onChange={handleInputChange} style={styles.formInputSmall}/> : student.allergies || 'Ninguna'}</p>
@@ -117,8 +115,10 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                         </p>
                         <p><strong>Titular Cuenta:</strong> {isEditing ? <input name="accountHolderName" value={editedStudent.accountHolderName} onChange={handleInputChange} style={styles.formInputSmall}/> : student.accountHolderName}</p>
                         <p><strong>NIF/DNI:</strong> {isEditing ? <input name="nif" value={editedStudent.nif || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.nif || 'No especificado'}</p>
+                        {/* --- INICIO DE CAMBIOS --- */}
                         <p><strong>Matrícula:</strong> <label style={styles.checkboxLabel}><input type="checkbox" name="enrollmentPaid" checked={editedStudent.enrollmentPaid} onChange={handleInputChange} disabled={!isEditing} /> {editedStudent.enrollmentPaid ? 'Pagada' : 'Pendiente'}</label></p>
-                        <p><strong>Mensualidad:</strong> <label style={styles.checkboxLabel}><input type="checkbox" name="monthlyPayment" checked={editedStudent.monthlyPayment} onChange={handleInputChange} disabled={!isEditing} /> {editedStudent.monthlyPayment ? 'Pagada' : 'Pendiente'}</label></p>
+                        <p><strong>Horario Ampliado:</strong> <label style={styles.checkboxLabel}><input type="checkbox" name="extendedSchedule" checked={editedStudent.extendedSchedule} onChange={handleInputChange} disabled={!isEditing} /> {editedStudent.extendedSchedule ? 'Activo (+30€)' : 'No'}</label></p>
+                        {/* --- FIN DE CAMBIOS --- */}
                     </div>
                 </div>
 

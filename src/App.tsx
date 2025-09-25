@@ -45,7 +45,7 @@ import PenaltiesViewer from './components/tabs/PenaltiesViewer';
 import StaffLogViewer from './components/tabs/StaffLogViewer';
 import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
-import Help from './components/tabs/Help'; // <-- Ruta corregida
+import Help from './components/tabs/Help';
 
 // --- FIN DE IMPORTACIONES ---
 
@@ -74,13 +74,15 @@ const App = () => {
   const [config, setConfig] = useState<Config>({ centerName: 'mi pequeño recreo', currency: '€', lateFee: 6 });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [children, setChildren] = useState<Student[]>([]);
-  const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '' });
+  // --- INICIO DE CAMBIO: Estado inicial del formulario ---
+  const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
+  // --- FIN DE CAMBIO ---
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [appHistory, setAppHistory] = useState<AppHistoryLog[]>([]);
   const [staffTimeLogs, setStaffTimeLogs] = useState<StaffTimeLog[]>([]);
 
-  // --- INICIALIZACIÓN DE FIREBASE Y AUTH LISTENER ---
+  // ... (código de inicialización y listeners de Firebase sin cambios) ...
   useEffect(() => {
     const unsubscribe = ensureAnonymousAuth(
         (uid) => {
@@ -95,7 +97,6 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- LISTENERS DE FIREBASE PARA DATOS EN TIEMPO REAL ---
   const dataListeners = [
       { name: 'children', setter: setChildren },
       { name: 'attendance', setter: setAttendance },
@@ -143,12 +144,10 @@ const App = () => {
       }
   }, [children, selectedChild]);
 
-
   // --- LÓGICA DE NEGOCIO (HANDLERS) ---
   
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
   
-  // Guardar timestamp como ISO string para que se pueda ordenar
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
     const newLog = {
@@ -165,7 +164,7 @@ const App = () => {
     }
   }, [userId, appId]);
 
-  // --- Lógica de Facturación Automática ---
+  // --- INICIO DE CAMBIO: Lógica de Facturación Automática ---
   useEffect(() => {
     if (isLoading || !userId || children.length === 0) return;
 
@@ -201,7 +200,11 @@ const App = () => {
             );
             const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
             
-            let totalAmount = schedule.price + totalPenalties;
+            // --- INICIO DE CAMBIO: Aplicar suplemento de horario ampliado ---
+            const extendedScheduleFee = child.extendedSchedule ? 30 : 0;
+            let totalAmount = schedule.price + totalPenalties + extendedScheduleFee;
+            // --- FIN DE CAMBIO ---
+            
             let enrollmentFeeApplied = false;
             
             if (!child.enrollmentPaid) { 
@@ -218,6 +221,9 @@ const App = () => {
                 base: schedule.price,
                 penalties: totalPenalties,
                 enrollmentFeeIncluded: enrollmentFeeApplied,
+                // --- INICIO DE CAMBIO ---
+                extendedScheduleFee,
+                // --- FIN DE CAMBIO ---
             };
 
             const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
@@ -232,7 +238,10 @@ const App = () => {
                     if (existingInvoice.amount !== invoiceData.amount || 
                         existingInvoice.base !== invoiceData.base || 
                         existingInvoice.penalties !== invoiceData.penalties ||
-                        existingInvoice.enrollmentFeeIncluded !== invoiceData.enrollmentFeeIncluded
+                        existingInvoice.enrollmentFeeIncluded !== invoiceData.enrollmentFeeIncluded ||
+                        // --- INICIO DE CAMBIO ---
+                        existingInvoice.extendedScheduleFee !== invoiceData.extendedScheduleFee
+                        // --- FIN DE CAMBIO ---
                     ) {
                         await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
                             ...invoiceData,
@@ -255,8 +264,9 @@ const App = () => {
     runSilentInvoiceUpdate();
 
   }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]); 
+  // --- FIN DE CAMBIO ---
 
-
+  // ... (código de handleExport, login y logout sin cambios) ...
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
 
@@ -418,7 +428,6 @@ const App = () => {
     }
   };
 
-  // --- Login Persistente ---
   const handleLogin = (username: string) => {
     setIsLoggedIn(true);
     setCurrentUser(username);
@@ -436,7 +445,6 @@ const App = () => {
     sessionStorage.removeItem('currentUser');
     setActiveTab('dashboard');
   };
-  // --- Fin Login ---
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -455,7 +463,9 @@ const App = () => {
     try {
         const childrenCollectionPath = `/artifacts/${appId}/public/data/children`;
         await addDoc(collection(db, childrenCollectionPath), newChild);
-        setChildForm({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '' });
+        // --- INICIO DE CAMBIO: Limpiar el formulario ---
+        setChildForm({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
+        // --- FIN DE CAMBIO ---
         addNotification(`Alumno ${newChild.name} inscrito con éxito.`);
         addAppHistoryLog(currentUser, 'Inscripción', `Se ha inscrito al nuevo alumno: ${newChild.name} ${newChild.surname}.`);
         setActiveTab('alumnos');
@@ -465,6 +475,7 @@ const App = () => {
     }
   };
 
+  // ... (resto de handlers sin cambios hasta la generación de facturas) ...
   const handleDeleteChild = (childId: string, name: string) => { 
       const onConfirmDelete = async () => {
           if (!userId) return;
@@ -725,6 +736,7 @@ const App = () => {
         }
     };
 
+  // --- INICIO DE CAMBIO: Lógica para generar factura individual ---
   const handleGenerateAndExportInvoice = async (student: Student) => {
         const month = new Date().getMonth();
         const year = new Date().getFullYear();
@@ -739,9 +751,13 @@ const App = () => {
             }
             const childPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === month && new Date(p.date).getFullYear() === year);
             const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
-            let totalAmount = schedule.price + totalPenalties;
-            let enrollmentFeeApplied = false;
             
+            // --- INICIO DE CAMBIO: Aplicar suplemento de horario ampliado ---
+            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+            let totalAmount = schedule.price + totalPenalties + extendedScheduleFee;
+            // --- FIN DE CAMBIO ---
+
+            let enrollmentFeeApplied = false;
             if (!student.enrollmentPaid) { 
                 totalAmount += 100; 
                 enrollmentFeeApplied = true;
@@ -757,6 +773,9 @@ const App = () => {
                 penalties: totalPenalties,
                 enrollmentFeeIncluded: enrollmentFeeApplied,
                 status: 'Pendiente',
+                // --- INICIO DE CAMBIO ---
+                extendedScheduleFee,
+                // --- FIN DE CAMBIO ---
             };
             
             try {
@@ -773,7 +792,9 @@ const App = () => {
         
         handleGeneratePDFInvoice(student, invoiceToExport);
     };
+    // --- FIN DE CAMBIO ---
 
+    // --- INICIO DE CAMBIO: Lógica para generar PDF de factura ---
     const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
         if (!student || !invoice) {
             addNotification("Error: Faltan datos del alumno o de la factura para generar el PDF.");
@@ -804,14 +825,25 @@ const App = () => {
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
+
         if (invoice.enrollmentFeeIncluded) {
             tableRows.push(["Matrícula", "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
         }
+        
         tableRows.push([`Jardín de infancia (${new Date(invoice.date).toLocaleString('es-ES', { month: 'long' })})`, "1", `${invoice.base.toFixed(2)} ${config.currency}`, `${invoice.base.toFixed(2)} ${config.currency}`]);
+        
+        // --- INICIO DE CAMBIO: Añadir suplemento a la tabla ---
+        if (invoice.extendedScheduleFee && invoice.extendedScheduleFee > 0) {
+            tableRows.push([`Suplemento Horario Ampliado`, "1", `${invoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${invoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+        }
+        // --- FIN DE CAMBIO ---
+        
         if(invoice.penalties > 0) {
             tableRows.push([`Penalizaciones por retraso`, "", "", `${invoice.penalties.toFixed(2)} ${config.currency}`]);
         }
+        
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${invoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -835,6 +867,7 @@ const App = () => {
         doc.save(`factura_${student.name}_${student.surname}_${invoice.date}.pdf`);
         addNotification(`Generando factura PDF para ${student.name}.`);
     };
+    // --- FIN DE CAMBIO ---
 
 
   // --- RENDERIZADO PRINCIPAL (EL SHELL) ---
@@ -879,10 +912,8 @@ const App = () => {
               return <AppHistoryViewer history={appHistory} onExport={() => handleExport('historial')} />;
           case 'configuracion':
               return <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />;
-          // --- INICIO DE CAMBIO: Nuevo case ---
           case 'ayuda':
               return <Help />;
-          // --- FIN DE CAMBIO ---
           default:
               return <Dashboard students={children} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
       }
@@ -950,7 +981,6 @@ const App = () => {
               return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
             })}
 
-            {/* --- INICIO DE CAMBIO: Pestaña 'Ayuda' añadida para personal --- */}
             {currentUser !== 'Gonzalo Navarro' && (
               <>
                 <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}>
@@ -961,7 +991,6 @@ const App = () => {
                 </button>
               </>
             )}
-            {/* --- FIN DE CAMBIO --- */}
 
             {currentUser === 'Gonzalo Navarro' && (
               <>
@@ -991,9 +1020,7 @@ const App = () => {
 
         <main style={styles.mainContent}>
           <header style={styles.header}>
-             {/* --- INICIO DE CAMBIO: Título del header para 'ayuda' --- */}
             <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-             {/* --- FIN DE CAMBIO --- */}
              <button onClick={handleLogout} style={styles.logoutButton}>
                 <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión
              </button>

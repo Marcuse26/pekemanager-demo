@@ -36,9 +36,7 @@ const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewS
                 </div>
                 <div>
                     <label style={styles.formLabel}>Fecha de Alta</label>
-                    {/* --- INICIO DE CAMBIO: 'required' añadido --- */}
                     <input name="startMonth" type="date" value={childForm.startMonth || ''} onChange={handleInputChange} style={{...styles.formInput, marginBottom: 0}} required />
-                    {/* --- FIN DE CAMBIO --- */}
                 </div>
                 <div style={{gridColumn: '1 / -1'}}>
                     <label style={styles.formLabel}>Fecha de Baja (Opcional)</label>
@@ -63,7 +61,18 @@ const NewStudentForm = ({ onAddChild, childForm, onFormChange, schedules }: NewS
                 <input name="authorizedPickup" value={childForm.authorizedPickup} onChange={handleInputChange} placeholder="Personas autorizadas para la recogida" style={{...styles.formInput, gridColumn: '1 / -1'}} />
             </div>
             <textarea name="allergies" value={childForm.allergies} onChange={handleInputChange} placeholder="Alergias y notas médicas..." style={{...styles.formInput, width: 'calc(100% - 24px)', gridColumn: '1 / -1'}} rows={3}></textarea>
-            <div style={{gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px'}}><label style={styles.checkboxLabel}><input type="checkbox" name="enrollmentPaid" checked={childForm.enrollmentPaid} onChange={handleInputChange} /> Matrícula Pagada (100€)</label></div>
+            
+            {/* --- INICIO DE CAMBIOS --- */}
+            <div style={{gridColumn: '1 / -1', display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px'}}>
+                <label style={styles.checkboxLabel}>
+                    <input type="checkbox" name="enrollmentPaid" checked={childForm.enrollmentPaid} onChange={handleInputChange} /> Matrícula Pagada (100€)
+                </label>
+                <label style={styles.checkboxLabel}>
+                    <input type="checkbox" name="extendedSchedule" checked={childForm.extendedSchedule} onChange={handleInputChange} /> Horario Ampliado (7:45) (+30€)
+                </label>
+            </div>
+            {/* --- FIN DE CAMBIOS --- */}
+            
             <button type="submit" style={{...styles.submitButton, gridColumn: '1 / -1'}}>Inscribir Alumno</button>
         </form>
     </div>
