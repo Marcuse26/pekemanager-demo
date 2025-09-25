@@ -1,4 +1,4 @@
-// Contenido para: src/App.tsx
+// Contenido COMPLETO y CORREGIDO para: src/App.tsx
 
 // --- Importaciones de React y Librerías ---
 import { useState, useEffect, useCallback } from 'react';
@@ -861,6 +861,105 @@ const App = () => {
         doc.save(`factura_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura PDF para ${student.name}.`);
     };
+    
+    // --- INICIO DE CAMBIO: Nueva función para factura del mes siguiente ---
+    const handleGenerateNextMonthPDFInvoice = (student: Student) => {
+        if (!student) {
+            addNotification("Error: No se ha seleccionado un alumno.");
+            return;
+        }
+
+        const nextMonthDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+        const targetMonth = nextMonthDate.getMonth();
+        const targetYear = nextMonthDate.getFullYear();
+
+        let finalInvoice = invoices.find(inv => 
+            inv.childId === student.numericId && 
+            new Date(inv.date).getMonth() === targetMonth && 
+            new Date(inv.date).getFullYear() === targetYear
+        );
+
+        if (!finalInvoice) {
+            const schedule = schedules.find(s => s.id === student.schedule);
+            if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
+            
+            const baseFee = schedule.price;
+            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+            const totalAmount = baseFee + extendedScheduleFee;
+            const nextMonthDateString = new Date(targetYear, targetMonth, 1).toISOString().split('T')[0];
+
+            finalInvoice = {
+                id: 'temp_next',
+                numericId: Date.now(),
+                childId: student.numericId,
+                childName: `${student.name} ${student.surname}`,
+                date: nextMonthDateString,
+                amount: totalAmount,
+                base: baseFee,
+                penalties: 0,
+                enrollmentFeeIncluded: false,
+                status: 'Pendiente',
+                extendedScheduleFee,
+            };
+        }
+
+        const doc = new jsPDF();
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(32);
+        doc.setTextColor('#c55a33');
+        doc.text("mi pequeño recreo", 105, 22, { align: 'center' });
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Vision Paideia SLU", 20, 40);
+        doc.text("CIF: B21898341", 20, 45);
+        doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
+        doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
+        doc.text(`Fecha: ${new Date(finalInvoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        doc.setDrawColor(220, 220, 220);
+        doc.rect(15, 60, 180, 25); 
+        doc.setFont('Helvetica', 'bold');
+        doc.text("Cliente:", 20, 66);
+        doc.setFont('Helvetica', 'normal');
+        const clientName = student.accountHolderName || `${student.fatherName || ''} ${student.motherName || ''}`.trim();
+        doc.text(`Nombre y apellidos: ${clientName}`, 20, 72);
+        doc.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78);
+        doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
+        const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
+        const tableRows = [];
+        
+        let conceptText = `Jardín de infancia (${new Date(finalInvoice.date).toLocaleString('es-ES', { month: 'long' })})`;
+        tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
+        
+        if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
+            tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+        }
+        
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        
+        autoTable(doc, {
+            startY: 90,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+            didDrawPage: (data: any) => {
+                doc.setFontSize(10);
+                doc.text(`Forma de pago: ${student.paymentMethod}`, data.settings.margin.left, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 25);
+                doc.setFont('Helvetica', 'bold');
+                doc.setFontSize(18);
+                doc.setTextColor('#c55a33');
+                doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
+            },
+            columnStyles: {
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+            }
+        });
+        
+        doc.save(`factura_adelantada_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
+        addNotification(`Generando factura del próximo mes para ${student.name}.`);
+    };
     // --- FIN DE CAMBIO ---
 
 
@@ -929,6 +1028,7 @@ const App = () => {
           />
       )}
 
+      {/* --- INICIO DE CAMBIO: Pasar la nueva prop al modal --- */}
       {selectedChild && <StudentDetailModal 
           student={selectedChild} 
           onClose={() => setSelectedChild(null)} 
@@ -940,8 +1040,10 @@ const App = () => {
           onUpdate={handleUpdateStudent}
           onAddDocument={handleAddDocument}
           onGenerateAndExportInvoice={handleGenerateAndExportInvoice}
+          onGenerateAndExportNextMonthInvoice={handleGenerateNextMonthPDFInvoice}
           currentUser={currentUser}
       />}
+      {/* --- FIN DE CAMBIO --- */}
       
       {viewingCalendarForStudent && <StudentPersonalCalendar
           student={viewingCalendarForStudent}
@@ -1030,4 +1132,3 @@ const App = () => {
 };
 
 export default App;
-
