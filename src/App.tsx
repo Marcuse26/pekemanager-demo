@@ -965,19 +965,23 @@ const App = () => {
     // --- INICIO DE CAMBIO: Nueva función para factura de meses anteriores ---
     const handleGeneratePastMonthsInvoice = (student: Student) => {
         const today = new Date();
-        const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-        const pastInvoices = invoices.filter(inv =>
-            inv.childId === student.numericId &&
-            new Date(inv.date) < firstDayThisMonth
-        );
+        const studentPastInvoices = invoices
+            .filter(inv =>
+                inv.childId === student.numericId && new Date(inv.date) < firstDayCurrentMonth
+            )
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        if (pastInvoices.length === 0) {
-            addNotification(`No se encontraron facturas de meses anteriores para ${student.name}.`);
+        if (studentPastInvoices.length === 0) {
+            addNotification(`No hay facturas de meses anteriores para ${student.name}.`);
             return;
         }
 
-        const totalAmount = pastInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+        const totalAmount = studentPastInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+        const conceptMonths = studentPastInvoices
+            .map(inv => new Date(inv.date).toLocaleString('es-ES', { month: 'long', year: 'numeric' }))
+            .join(', ');
 
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
@@ -1001,15 +1005,17 @@ const App = () => {
         doc.text(`Nombre y apellidos: ${clientName}`, 20, 72);
         doc.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78);
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
-        const tableColumn = ["Concepto", "Importe"];
+        const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
 
-        pastInvoices.forEach(inv => {
-            const monthName = new Date(inv.date).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
-            tableRows.push([`Cuota de ${monthName}`, `${inv.amount.toFixed(2)} ${config.currency}`]);
-        });
+        tableRows.push([
+            `Cuotas de meses anteriores (${conceptMonths})`,
+            "1",
+            `${totalAmount.toFixed(2)} ${config.currency}`,
+            `${totalAmount.toFixed(2)} ${config.currency}`
+        ]);
 
-        tableRows.push([{ content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
 
         autoTable(doc, {
             startY: 90,
@@ -1026,7 +1032,8 @@ const App = () => {
                 doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
             },
             columnStyles: {
-                1: { halign: 'right' },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
             }
         });
 
@@ -1102,7 +1109,7 @@ const App = () => {
           />
       )}
 
-      {/* --- INICIO DE CAMBIO: Pasar la nueva prop al modal --- */}
+      {/* --- INICIO DE CAMBIO: Pasar las nuevas props al modal --- */}
       {selectedChild && <StudentDetailModal
           student={selectedChild}
           onClose={() => setSelectedChild(null)}
@@ -1115,7 +1122,9 @@ const App = () => {
           onAddDocument={handleAddDocument}
           onGenerateAndExportInvoice={handleGenerateAndExportInvoice}
           onGenerateAndExportNextMonthInvoice={handleGenerateNextMonthPDFInvoice}
+          onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice}
           currentUser={currentUser}
+          invoices={invoices}
       />}
       {/* --- FIN DE CAMBIO --- */}
 
