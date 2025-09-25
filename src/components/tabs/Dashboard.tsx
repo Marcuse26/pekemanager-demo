@@ -1,5 +1,5 @@
 // Contenido para: src/components/tabs/Dashboard.tsx
-import type { ChartData, ChartOptions } from 'chart.js'; // Importación corregida (sin ChartType)
+import type { ChartData, ChartOptions } from 'chart.js';
 import { UserCheck, DollarSign, Cake } from 'lucide-react';
 import { styles } from '../../styles';
 import type { Student, Attendance, Invoice, Schedule, Config } from '../../types';
@@ -29,8 +29,14 @@ const Dashboard = ({ students, attendance, invoices, schedules, config }: Dashbo
     const scheduleData = schedules.map(s => scheduleCounts[s.id] || 0);
 
     const distinctColors = [
-        '#E6194B', '#3CB44B', '#FFE119', '#4363D8', '#F58231', '#911EB4', 
-        '#42D4F4', '#F032E6', '#FABEBE', '#469990', '#DBF876', '#BCF60C',
+        '#E6194B', // Cuota 315€ (Rojo)
+        '#3CB44B', // Cuota 410€ (Verde)
+        '#F58231', // Cuota 425€ (Naranja)
+        '#4363D8', // Cuota 450€ (Azul)
+        '#FFE119', // Cuota 460€ (Amarillo)
+        '#911EB4', // Cuota 495€ (Púrpura)
+        '#F032E6', // Cuota 545€ (Rosa)
+        '#42D4F4', '#FABEBE', '#469990', '#DBF876', '#BCF60C',
         '#FFD8B1', '#000075', '#A9A9A9', '#800000', '#AAFFC3', '#808000', 
     ];
 
@@ -44,10 +50,13 @@ const Dashboard = ({ students, attendance, invoices, schedules, config }: Dashbo
         }] 
     };
 
-    // Gráfica: Métodos de Pago
+    // --- INICIO DE CAMBIO: Lógica del gráfico de Métodos de Pago ---
+    // Se filtran los alumnos cuyo método de pago sea "Efectivo"
     const paymentMethodCounts = students.reduce((acc, student) => {
         const method = student.paymentMethod || 'No especificado';
-        acc[method] = (acc[method] || 0) + 1;
+        if (method && method.toLowerCase() !== 'efectivo') {
+            acc[method] = (acc[method] || 0) + 1;
+        }
         return acc;
     }, {} as Record<string, number>);
 
@@ -56,15 +65,16 @@ const Dashboard = ({ students, attendance, invoices, schedules, config }: Dashbo
         datasets: [{
             label: 'Método de Pago',
             data: Object.values(paymentMethodCounts),
-            backgroundColor: ['#007bff', '#28a745', '#ffc107'], 
+            // Se asegura de que haya suficientes colores para los métodos de pago restantes
+            backgroundColor: ['#28a745', '#ffc107', '#007bff', '#6f42c1'], 
             borderWidth: 0
         }]
     };
+    // --- FIN DE CAMBIO ---
 
     // Opciones para gráfico de Asistencia (sin leyenda)
     const chartOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
     
-    // --- CORRECCIÓN: Opciones para Ocupación (con leyenda y FUENTE REDUCIDA) ---
     const occupancyChartOptions: ChartOptions = { 
         responsive: true, 
         maintainAspectRatio: false, 
@@ -74,16 +84,15 @@ const Dashboard = ({ students, attendance, invoices, schedules, config }: Dashbo
                 position: 'bottom', 
                 labels: { 
                     boxWidth: 12, 
-                    padding: 15, // Padding reducido
+                    padding: 15,
                     font: {
-                        size: 10 // Tamaño de fuente reducido a 10px
+                        size: 10
                     }
                 } 
             } 
         } 
     };
 
-    // Opciones para gráfico de Pagos (leyenda normal)
     const paymentChartOptions: ChartOptions = { 
         responsive: true, 
         maintainAspectRatio: false, 
@@ -112,36 +121,30 @@ const Dashboard = ({ students, attendance, invoices, schedules, config }: Dashbo
 
     return (
         <div>
-            {/* --- FILA SUPERIOR: 3 TARJETAS DE ESTADÍSTICAS --- */}
             <div style={styles.dashboardGrid}>
                 <div style={styles.statCard}><UserCheck size={28} style={{color: '#28a745'}}/><div><p style={styles.statCardText}>Alumnos Hoy</p><span style={styles.statCardNumber}>{presentToday} / {students.length}</span></div></div>
                 <div style={styles.statCard}><DollarSign size={28} style={{color: '#007bff'}}/><div><p style={styles.statCardText}>Facturación del Mes</p><span style={styles.statCardNumber}>{monthlyBilling.toFixed(2)}{config.currency}</span></div></div>
                 <div style={styles.statCard}><Cake size={28} style={{color: '#ffc107'}}/><div><p style={styles.statCardText}>Próximos Cumpleaños</p><span style={styles.statCardNumber}>{upcomingBirthdays.length}</span></div></div>
             </div>
 
-            {/* --- LAYOUT CORREGIDO: FILA DE 3 GRÁFICOS (Central 1.5fr y leyenda pequeña) --- */}
             <div style={{...styles.grid, gridTemplateColumns: '1fr 1.5fr 1fr', marginTop: '30px', alignItems: 'start'}}>
                 
-                {/* Columna Izquierda (Asistencia) */}
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>Asistencia Última Semana</h3>
                     <ChartComponent type="bar" data={attendanceChartData} options={chartOptions} />
                 </div>
 
-                {/* Columna Central (Ocupación - ahora con 1.5fr Y fuente de leyenda 10px) */}
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>Ocupación por Horario</h3>
                     <ChartComponent type="doughnut" data={occupancyChartData} options={occupancyChartOptions} />
                 </div>
 
-                {/* Columna Derecha (Métodos de Pago) */}
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>Métodos de Pago</h3>
                     <ChartComponent type="doughnut" data={paymentChartData} options={paymentChartOptions} />
                 </div>
             </div>
 
-             {/* --- LOGO WEBEA (Movido al fondo de la página, centrado y sin tarjeta) --- */}
             <div style={webeaFooterContainer}>
                 <img src={webeaLogo} alt="Logo Webea" style={{ width: '150px' }} />
                 <p style={webeaText}>Desarrollado por Webea</p>
