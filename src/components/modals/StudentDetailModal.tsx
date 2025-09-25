@@ -13,10 +13,13 @@ interface StudentDetailModalProps {
     onUpdate: (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, currentUser: string) => void;
     onAddDocument: (studentId: string, document: Document, currentUser: string) => void;
     onGenerateAndExportInvoice: (student: Student) => void;
+    // --- INICIO DE CAMBIO ---
+    onGenerateAndExportNextMonthInvoice: (student: Student) => void;
+    // --- FIN DE CAMBIO ---
     currentUser: string;
 }
 
-const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateAndExportInvoice, currentUser }: StudentDetailModalProps) => {
+const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateAndExportInvoice, onGenerateAndExportNextMonthInvoice, currentUser }: StudentDetailModalProps) => {
     const modalRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(modalRef, onClose);
     
@@ -27,6 +30,24 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
     useEffect(() => {
       setEditedStudent(student);
     }, [student]);
+
+    // --- INICIO DE CAMBIO: Lógica para determinar si está activo el próximo mes ---
+    const isStudentActiveNextMonth = (student: Student): boolean => {
+        if (!student.startMonth) return false;
+        
+        const today = new Date();
+        const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+
+        const startDate = new Date(student.startMonth);
+        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+
+        const startsBeforeOrDuringNextMonth = startDate <= lastDayNextMonth;
+        const endsAfterOrDuringNextMonth = !endDate || endDate >= firstDayNextMonth;
+
+        return startsBeforeOrDuringNextMonth && endsAfterOrDuringNextMonth;
+    }
+    // --- FIN DE CAMBIO ---
 
     if (!student) return null;
 
@@ -83,10 +104,8 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                     <div style={styles.modalSection}>
                         <h3 style={styles.modalSectionTitle}>Datos Personales</h3>
                         <p><strong>F. Nacimiento:</strong> {isEditing ? <input type="date" name="birthDate" value={editedStudent.birthDate} onChange={handleInputChange} style={styles.formInputSmall}/> : student.birthDate}</p>
-                        
                         <p><strong>Fecha Alta:</strong> {isEditing ? <input type="date" name="startMonth" value={editedStudent.startMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.startMonth || 'No especificada'}</p>
                         <p><strong>Fecha Baja:</strong> {isEditing ? <input type="date" name="plannedEndMonth" value={editedStudent.plannedEndMonth || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.plannedEndMonth || 'No especificada'}</p>
-
                         <p><strong>Dirección:</strong> {isEditing ? <input type="text" name="address" value={editedStudent.address} onChange={handleInputChange} style={styles.formInputSmall}/> : student.address}</p>
                         <p><strong>Alergias:</strong> {isEditing ? <textarea name="allergies" value={editedStudent.allergies} onChange={handleInputChange} style={styles.formInputSmall}/> : student.allergies || 'Ninguna'}</p>
                     </div>
@@ -115,10 +134,8 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                         </p>
                         <p><strong>Titular Cuenta:</strong> {isEditing ? <input name="accountHolderName" value={editedStudent.accountHolderName} onChange={handleInputChange} style={styles.formInputSmall}/> : student.accountHolderName}</p>
                         <p><strong>NIF/DNI:</strong> {isEditing ? <input name="nif" value={editedStudent.nif || ''} onChange={handleInputChange} style={styles.formInputSmall}/> : student.nif || 'No especificado'}</p>
-                        {/* --- INICIO DE CAMBIOS --- */}
                         <p><strong>Matrícula:</strong> <label style={styles.checkboxLabel}><input type="checkbox" name="enrollmentPaid" checked={editedStudent.enrollmentPaid} onChange={handleInputChange} disabled={!isEditing} /> {editedStudent.enrollmentPaid ? 'Pagada' : 'Pendiente'}</label></p>
                         <p><strong>Horario Ampliado:</strong> <label style={styles.checkboxLabel}><input type="checkbox" name="extendedSchedule" checked={editedStudent.extendedSchedule} onChange={handleInputChange} disabled={!isEditing} /> {editedStudent.extendedSchedule ? 'Activo (+30€)' : 'No'}</label></p>
-                        {/* --- FIN DE CAMBIOS --- */}
                     </div>
                 </div>
 
@@ -156,10 +173,15 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                     )}
                 </div>
 
-                <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-                     <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, width:'50%'}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
-                     <button onClick={() => onGenerateAndExportInvoice(student)} style={{...styles.submitButton, width:'50%', backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Exportar Factura PDF</button>
+                {/* --- INICIO DE CAMBIO: Botones de exportación --- */}
+                <div style={{display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap'}}>
+                     <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, flex: 1}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
+                     <button onClick={() => onGenerateAndExportInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
+                     {isStudentActiveNextMonth(student) && (
+                        <button onClick={() => onGenerateAndExportNextMonthInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#28a745'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Siguiente</button>
+                     )}
                 </div>
+                {/* --- FIN DE CAMBIO --- */}
 
             </div>
         </div>
