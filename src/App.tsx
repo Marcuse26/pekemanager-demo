@@ -15,7 +15,7 @@ import { db } from './firebase/config';
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext'; // ¡Importamos nuestro hook!
-import type { Student, Invoice, StaffTimeLog, Config, AppHistoryLog, NotificationMessage, StudentFormData, HistoryLog, Document, Penalty } from './types';
+import type { Student, Invoice, StaffTimeLog, Config, Attendance, NotificationMessage, StudentFormData, HistoryLog, Document, Penalty } from './types';
 
 // --- Importaciones de Componentes ---
 import { MiPequenoRecreoLogo } from './components/common/Logos';
@@ -878,19 +878,19 @@ const App = () => {
 
   const renderTabContent = () => {
       switch(activeTab) {
-          case 'dashboard': return <Dashboard students={students} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
+          case 'dashboard': return <Dashboard />;
           case 'inscripciones': return <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />;
-          case 'alumnos': return <StudentList students={students} onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />;
-          case 'asistencia': return <AttendanceManager students={students} attendance={attendance} onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />;
-          case 'calendario': return <CalendarView attendance={attendance} />;
-          case 'facturacion': return <Invoicing invoices={invoices} onUpdateStatus={handleUpdateInvoiceStatus} config={config} onExport={() => handleExport('facturacion')} students={students} onGeneratePastInvoice={handleGeneratePDFInvoice} onDeleteInvoice={handleDeleteInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />;
-          case 'penalizaciones': return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
+          case 'alumnos': return <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />;
+          case 'asistencia': return <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />;
+          case 'calendario': return <CalendarView />;
+          case 'facturacion': return <Invoicing onUpdateStatus={handleUpdateInvoiceStatus} onExport={() => handleExport('facturacion')} onGeneratePastInvoice={handleGeneratePDFInvoice} onDeleteInvoice={handleDeleteInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />;
+          case 'penalizaciones': return <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
           case 'control': return <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />;
           case 'personal': return <StaffLogViewer logs={staffTimeLogs} onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />;
-          case 'historial': return <AppHistoryViewer history={appHistory} onExport={() => handleExport('historial')} />;
+          case 'historial': return <AppHistoryViewer onExport={() => handleExport('historial')} />;
           case 'configuracion': return <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />;
           case 'ayuda': return <Help />;
-          default: return <Dashboard students={students} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
+          default: return <Dashboard />;
       }
   }
 

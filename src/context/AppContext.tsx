@@ -1,5 +1,6 @@
 // Contenido para: src/context/AppContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { collection, doc, onSnapshot, query, setDoc } from 'firebase/firestore';
 import { db, ensureAnonymousAuth } from '../firebase/config';
 import { schedules as defaultSchedules } from '../config/schedules';
