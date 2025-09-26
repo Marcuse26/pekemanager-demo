@@ -799,7 +799,7 @@ const App = () => {
         doc.text("CIF: B21898341", 20, 45);
         doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
         doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
-        doc.text(`Fecha: ${new Date(finalInvoice.date).toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
         doc.setDrawColor(220, 220, 220);
         doc.rect(15, 60, 180, 25);
         doc.setFont('Helvetica', 'bold');
