@@ -1,10 +1,9 @@
- // Contenido para: src/components/tabs/AttendanceManager.tsx
+// Contenido para: src/components/tabs/AttendanceManager.tsx
 import { useState } from 'react';
 import { Download, Save } from 'lucide-react';
 import { styles } from '../../styles';
 import { useAppContext } from '../../context/AppContext';
-import type { Attendance } from '../../types'; // [!code --]
-import type { Attendance } from '../../types'; // [!code ++]
+import type { Attendance } from '../../types';
 
 interface AttendanceManagerProps {
     onSave: (data: Omit<Attendance, 'id' | 'childId'> & {childId: number}) => void;
