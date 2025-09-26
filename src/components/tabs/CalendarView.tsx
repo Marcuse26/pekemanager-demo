@@ -1,21 +1,15 @@
-// Contenido para: src/components/tabs/CalendarView.tsx
 import { useState } from 'react';
 import { Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { styles } from '../../styles';
-import type { Attendance } from '../../types';
+import { useAppContext } from '../../context/AppContext'; // [!code ++]
 
-interface CalendarViewProps {
-    attendance: Attendance[];
-}
-
-const CalendarView = ({ attendance }: CalendarViewProps) => {
+const CalendarView = () => {
+    const { attendance } = useAppContext(); // [!code ++]
     const [currentDate, setCurrentDate] = useState(new Date());
     const changeMonth = (amount: number) => { setCurrentDate(prevDate => { const newDate = new Date(prevDate); newDate.setMonth(newDate.getMonth() + amount); return newDate; }); };
 
     const dailyCounts = attendance.reduce((acc, att) => {
-        if (!acc[att.date]) {
-            acc[att.date] = new Set();
-        }
+        if (!acc[att.date]) { acc[att.date] = new Set(); }
         acc[att.date].add(att.childId);
         return acc;
     }, {} as Record<string, Set<number>>);
@@ -36,12 +30,7 @@ const CalendarView = ({ attendance }: CalendarViewProps) => {
             cells.push(
                 <div key={day} style={{...styles.dayCell, ...(count > 20 ? {backgroundColor: '#d4edda'} : count > 10 ? {backgroundColor: '#fff3cd'} : {})}}>
                     <span style={styles.dayNumber}>{day}</span>
-                    {count > 0 && (
-                        <div style={styles.dayCount}>
-                            <Users size={14} style={{marginRight: '4px'}} />
-                            {count}
-                        </div>
-                    )}
+                    {count > 0 && (<div style={styles.dayCount}><Users size={14} style={{marginRight: '4px'}} />{count}</div>)}
                 </div>
             );
         }
