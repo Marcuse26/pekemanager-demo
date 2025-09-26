@@ -154,7 +154,7 @@ const App = () => {
     switch (dataType) {
         case 'alumnos':
             dataToExport = [...students]
-                .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`))
+                .sort((a: Student, b: Student) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`))
                 .map(c => ({
                     Estado: isStudentActiveThisMonth(c) ? 'Activo' : 'Inactivo',
                     Nombre: c.name, Apellidos: c.surname, Fecha_Nacimiento: c.birthDate, Mes_Inicio: c.startMonth,
@@ -168,7 +168,7 @@ const App = () => {
             break;
         case 'asistencia':
             dataToExport = [...attendance]
-                .sort((a, b) => b.date.localeCompare(a.date))
+                .sort((a: Attendance, b: Attendance) => b.date.localeCompare(a.date))
                 .map(a => ({ Alumno: a.childName, Fecha: a.date, Hora_Entrada: a.entryTime, Dejado_Por: a.droppedOffBy, Hora_Salida: a.exitTime, Recogido_Por: a.pickedUpBy }));
             break;
         case 'facturacion':
@@ -180,17 +180,17 @@ const App = () => {
                     const invDate = new Date(inv.date);
                     return activeStudentIds.has(inv.childId) && invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
                 })
-                .sort((a, b) => a.childName.localeCompare(b.childName))
+                .sort((a: Invoice, b: Invoice) => a.childName.localeCompare(b.childName))
                 .map(i => ({ Factura_ID: i.numericId, Alumno: i.childName, Base: i.base, Penalizaciones: i.penalties, Importe_Total: i.amount, Estado: i.status }));
             break;
         case 'penalizaciones':
             dataToExport = [...penalties]
-                .sort((a, b) => b.date.localeCompare(a.date))
+                .sort((a: Penalty, b: Penalty) => b.date.localeCompare(a.date))
                 .map(p => ({ Alumno: p.childName, Fecha: p.date, Importe: p.amount, Motivo: p.reason }));
             break;
         case 'fichajes':
             dataToExport = [...staffTimeLogs]
-                .sort((a, b) => {
+                .sort((a: StaffTimeLog, b: StaffTimeLog) => {
                     const dateCompare = b.date.localeCompare(a.date);
                     if (dateCompare !== 0) return dateCompare;
                     return (b.checkIn || '').localeCompare(a.checkIn || '');
@@ -213,7 +213,7 @@ const App = () => {
                 return isNaN(date.getTime()) ? 0 : date.getTime();
             };
             dataToExport = [...appHistory]
-                .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp))
+                .sort((a: AppHistoryLog, b: AppHistoryLog) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp))
                 .map(h => ({ Fecha: h.timestamp ? new Date(parseTimestamp(h.timestamp)).toLocaleString('es-ES') : 'N/A', Usuario: h.user, Accion: h.action, Detalles: h.details }));
             break;
         default: addNotification("Tipo de dato para exportar no reconocido."); return;

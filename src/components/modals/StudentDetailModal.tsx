@@ -4,7 +4,7 @@ import { Save, Edit, X, Paperclip, Upload, History, ChevronRight, Calendar as Ca
 import { styles } from '../../styles';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 import { useAppContext } from '../../context/AppContext';
-import type { Student, Schedule, Document } from '../../types';
+import type { Student, Document, Schedule } from '../../types';
 
 interface StudentDetailModalProps {
     student: Student;
@@ -18,7 +18,8 @@ interface StudentDetailModalProps {
     currentUser: string;
 }
 
-const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser }: StudentDetailModalProps) => {
+const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser }: StudentDetailModalProps) => {
+    const { schedules, invoices } = useAppContext();
     const modalRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(modalRef, onClose);
     
@@ -36,10 +37,10 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
         const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
 
-        const checkActivity = (student: Student, firstDay: Date, lastDay: Date): boolean => {
-            if (!student.startMonth) return false;
-            const startDate = new Date(student.startMonth);
-            const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+        const checkActivity = (targetStudent: Student, firstDay: Date, lastDay: Date): boolean => {
+            if (!targetStudent.startMonth) return false;
+            const startDate = new Date(targetStudent.startMonth);
+            const endDate = targetStudent.plannedEndMonth ? new Date(targetStudent.plannedEndMonth) : null;
             return startDate <= lastDay && (!endDate || endDate >= firstDay);
         };
         
@@ -188,7 +189,6 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
                         <button onClick={() => onGeneratePastMonthsInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#ffc107'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Meses Pasados</button>
                      )}
                 </div>
-
             </div>
         </div>
     );
