@@ -15,7 +15,7 @@ import { db } from './firebase/config';
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
-import type { Student, Invoice, StaffTimeLog, Config, Attendance, NotificationMessage, StudentFormData, HistoryLog, Document, Penalty } from './types';
+import type { Student, Invoice, StaffTimeLog, Config, Attendance, AppHistoryLog, NotificationMessage, StudentFormData, HistoryLog, Document, Penalty } from './types';
 
 // --- Importaciones de Componentes ---
 import { MiPequenoRecreoLogo } from './components/common/Logos';
@@ -689,5 +689,4 @@ const App = () => {
     </>
   );
 };
-
 export default App;
