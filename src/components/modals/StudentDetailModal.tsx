@@ -3,25 +3,22 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Save, Edit, X, Paperclip, Upload, History, ChevronRight, Calendar as CalendarIcon, FileText } from 'lucide-react';
 import { styles } from '../../styles';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
-import type { Student, Schedule, Document, Invoice } from '../../types';
+import { useAppContext } from '../../context/AppContext';
+import type { Student, Schedule, Document } from '../../types';
 
 interface StudentDetailModalProps {
     student: Student;
     onClose: () => void;
-    schedules: Schedule[];
     onViewPersonalCalendar: (student: Student) => void;
     onUpdate: (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, currentUser: string) => void;
     onAddDocument: (studentId: string, document: Document, currentUser: string) => void;
-    onGenerateAndExportInvoice: (student: Student) => void;
-    onGenerateAndExportNextMonthInvoice: (student: Student) => void;
-    currentUser: string;
-    // --- INICIO DE CAMBIO: Props añadidas ---
-    invoices: Invoice[];
+    onGenerateCurrentInvoice: (student: Student) => void;
+    onGenerateNextMonthInvoice: (student: Student) => void;
     onGeneratePastMonthsInvoice: (student: Student) => void;
-    // --- FIN DE CAMBIO ---
+    currentUser: string;
 }
 
-const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateAndExportInvoice, onGenerateAndExportNextMonthInvoice, currentUser, invoices, onGeneratePastMonthsInvoice }: StudentDetailModalProps) => {
+const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser }: StudentDetailModalProps) => {
     const modalRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(modalRef, onClose);
     
@@ -29,37 +26,35 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
     const [editedStudent, setEditedStudent] = useState(student);
     const [historyVisible, setHistoryVisible] = useState(false);
 
-    useEffect(() => {
-      setEditedStudent(student);
-    }, [student]);
+    useEffect(() => { setEditedStudent(student); }, [student]);
 
-    const isStudentActiveNextMonth = (student: Student): boolean => {
-        if (!student || !student.startMonth) return false;
-        
+    const { isStudentActiveThisMonth, isStudentActiveNextMonth } = useMemo(() => {
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
 
-        const startDate = new Date(student.startMonth);
-        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+        const checkActivity = (student: Student, firstDay: Date, lastDay: Date): boolean => {
+            if (!student.startMonth) return false;
+            const startDate = new Date(student.startMonth);
+            const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+            return startDate <= lastDay && (!endDate || endDate >= firstDay);
+        };
+        
+        return {
+            isStudentActiveThisMonth: checkActivity(student, firstDayThisMonth, lastDayThisMonth),
+            isStudentActiveNextMonth: checkActivity(student, firstDayNextMonth, lastDayNextMonth)
+        };
+    }, [student]);
 
-        const startsBeforeOrDuringNextMonth = startDate <= lastDayNextMonth;
-        const endsAfterOrDuringNextMonth = !endDate || endDate >= firstDayNextMonth;
-
-        return startsBeforeOrDuringNextMonth && endsAfterOrDuringNextMonth;
-    }
-    
-    // --- INICIO DE CAMBIO: Lógica para mostrar el botón de meses anteriores ---
-    const hasPastInvoices = useMemo(() => {
-        if (!student) return false;
+    const hasPastMonths = useMemo(() => {
+        if (!student.startMonth) return false;
         const today = new Date();
         const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        return invoices.some(inv =>
-            inv.childId === student.numericId && new Date(inv.date) < firstDayCurrentMonth
-        );
-    }, [invoices, student]);
-    // --- FIN DE CAMBIO ---
-
+        return new Date(student.startMonth) < firstDayCurrentMonth;
+    }, [student.startMonth]);
 
     if (!student) return null;
 
@@ -81,11 +76,7 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
         if (file) {
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
-                const newDocument: Document = {
-                    id: `doc_${Date.now()}`,
-                    name: file.name,
-                    data: loadEvent.target?.result as string,
-                };
+                const newDocument: Document = { id: `doc_${Date.now()}`, name: file.name, data: loadEvent.target?.result as string };
                 onAddDocument(student.id, newDocument, currentUser);
             };
             reader.readAsDataURL(file);
@@ -187,12 +178,14 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
 
                 <div style={{display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap'}}>
                      <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, flex: 1}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
-                     <button onClick={() => onGenerateAndExportInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
-                     {isStudentActiveNextMonth(student) && (
-                        <button onClick={() => onGenerateAndExportNextMonthInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#28a745'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Siguiente</button>
+                     {isStudentActiveThisMonth && (
+                        <button onClick={() => onGenerateCurrentInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
                      )}
-                     {hasPastInvoices && (
-                        <button onClick={() => onGeneratePastMonthsInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#ffc107'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Meses Anteriores</button>
+                     {isStudentActiveNextMonth && (
+                        <button onClick={() => onGenerateNextMonthInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#28a745'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Siguiente</button>
+                     )}
+                     {hasPastMonths && (
+                        <button onClick={() => onGeneratePastMonthsInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#ffc107'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Meses Pasados</button>
                      )}
                 </div>
 
@@ -200,5 +193,4 @@ const StudentDetailModal = ({ student, onClose, schedules, onViewPersonalCalenda
         </div>
     );
 };
-
 export default StudentDetailModal;

@@ -1,26 +1,27 @@
+// Contenido para: src/components/tabs/Invoicing.tsx
 import { useState, useMemo } from 'react';
 import { Download, FileText, Trash2 } from 'lucide-react';
 import { styles } from '../../styles';
-import { useAppContext } from '../../context/AppContext'; // [!code ++]
+import { useAppContext } from '../../context/AppContext';
 import type { Invoice, Student } from '../../types';
 
 interface InvoicingProps {
     onUpdateStatus: (invoiceId: string, newStatus: Invoice['status']) => void;
     onExport: () => void;
-    onGeneratePastInvoice: (student: Student, invoice: Invoice) => void;
-    onDeleteInvoice: (invoice: Invoice) => void;
+    onGenerateCurrentInvoice: (student: Student) => void;
+    onGenerateNextMonthInvoice: (student: Student) => void;
     onGeneratePastMonthsInvoice: (student: Student) => void;
+    onDeleteInvoice: (invoice: Invoice) => void;
+    addNotification: (message: string) => void;
 }
 
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
 
-const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteInvoice }: InvoicingProps) => {
-    const { invoices, students, config } = useAppContext(); // [!code ++]
+const Invoicing = ({ onUpdateStatus, onExport, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, onDeleteInvoice, addNotification }: InvoicingProps) => {
+    const { invoices, students, config } = useAppContext();
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
-
-    const handleStatusChange = (invoiceId: string, newStatus: Invoice['status']) => { onUpdateStatus(invoiceId, newStatus); };
 
     const { activeInvoices, pastInvoices, otherInvoices } = useMemo(() => {
         const active: Invoice[] = []; const past: Invoice[] = []; const other: Invoice[] = [];
@@ -39,7 +40,9 @@ const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteIn
             return new Date(student.plannedEndMonth) < firstDayThisMonth;
         }
 
-        for (const inv of invoices) {
+        const uniqueInvoices = Array.from(new Map(invoices.map(inv => [inv.childId, inv])).values());
+
+        for (const inv of uniqueInvoices) {
             const student = students.find(s => s.numericId === inv.childId);
             if (!student) { past.push(inv); continue; }
             if (isStudentActiveThisMonth(student)) { active.push(inv); }
@@ -54,10 +57,36 @@ const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteIn
         return { activeInvoices: active, pastInvoices: past, otherInvoices: other };
     }, [invoices, students]);
 
-    const handlePastInvoiceExport = (invoice: Invoice) => {
+    const handleInvoiceGeneration = (invoice: Invoice) => {
         const student = students.find(s => s.numericId === invoice.childId);
-        if (student) { onGeneratePastInvoice(student, invoice); } 
-        else { alert("Error: No se encontraron los datos del alumno para esta factura."); }
+        if (!student) { addNotification("Error: No se encontraron los datos del alumno."); return; }
+
+        switch (activeSubTab) {
+            case 'actual':
+                onGenerateCurrentInvoice(student);
+                break;
+            case 'pasadas':
+                onGeneratePastMonthsInvoice(student);
+                break;
+            case 'otros':
+                const today = new Date();
+                const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+                if (student.startMonth && new Date(student.startMonth).getMonth() === firstDayNextMonth.getMonth()) {
+                    onGenerateNextMonthInvoice(student);
+                } else {
+                    addNotification(`Solo se puede generar la factura del mes siguiente para alumnos que se incorporan el próximo mes.`);
+                }
+                break;
+        }
+    };
+    
+    const getButtonStyle = () => {
+        switch (activeSubTab) {
+            case 'actual': return { backgroundColor: '#17a2b8' }; // Azul/Turquesa
+            case 'pasadas': return { backgroundColor: '#ffc107' }; // Amarillo
+            case 'otros': return { backgroundColor: '#28a745' }; // Verde
+            default: return {};
+        }
     };
 
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -76,7 +105,7 @@ const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteIn
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h3 style={{...styles.cardTitle, marginBottom: 0, flexShrink: 0}}>Facturación ({listCount})</h3>
                 <input type="text" placeholder={placeholderText} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}} />
-                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8', flexShrink: 0}}> <Download size={16} style={{marginRight: '8px'}} />Exportar Facturación </button>
+                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#6c757d', flexShrink: 0}}> <Download size={16} style={{marginRight: '8px'}} />Exportar Listado</button>
             </div>
             <div style={styles.subTabContainer}>
                 <button style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}} onClick={() => { setActiveSubTab('actual'); setSearchTerm(''); }}> Activos ({activeInvoices.length}) </button>
@@ -92,8 +121,8 @@ const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteIn
                         </div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                             <strong style={{fontSize: '16px'}}>{inv.amount.toFixed(2)}{config.currency}</strong>
-                            <button onClick={() => handlePastInvoiceExport(inv)} style={{...styles.actionButton, backgroundColor: '#17a2b8', padding: '5px 10px'}} title="Exportar PDF de esta factura"> <FileText size={14} /> </button>
-                            <select value={inv.status} onChange={(e) => handleStatusChange(inv.id, e.target.value as Invoice['status'])} style={styles.formInputSmall}>
+                            <button onClick={() => handleInvoiceGeneration(inv)} style={{...styles.actionButton, ...getButtonStyle(), padding: '5px 10px'}} title="Generar nueva factura PDF"> <FileText size={14} /> </button>
+                            <select value={inv.status} onChange={(e) => onUpdateStatus(inv.id, e.target.value as Invoice['status'])} style={styles.formInputSmall}>
                                 <option value="Pendiente">Pendiente</option> <option value="Pagada">Pagada</option> <option value="Vencida">Vencida</option>
                             </select>
                             <button onClick={() => onDeleteInvoice(inv)} style={styles.deleteButton} title="Eliminar factura"> <Trash2 size={14} /> </button>
@@ -104,5 +133,4 @@ const Invoicing = ({ onUpdateStatus, onExport, onGeneratePastInvoice, onDeleteIn
         </div>
     );
 };
-
 export default Invoicing;
