@@ -4,7 +4,7 @@ import { Save, Edit, X, Paperclip, Upload, History, ChevronRight, Calendar as Ca
 import { styles } from '../../styles';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 import { useAppContext } from '../../context/AppContext';
-import type { Student, Document, Schedule } from '../../types';
+import type { Student, Document } from '../../types';
 
 interface StudentDetailModalProps {
     student: Student;
@@ -19,7 +19,7 @@ interface StudentDetailModalProps {
 }
 
 const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser }: StudentDetailModalProps) => {
-    const { schedules, invoices } = useAppContext();
+    const { schedules } = useAppContext();
     const modalRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(modalRef, onClose);
     
