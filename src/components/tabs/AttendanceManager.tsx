@@ -1,8 +1,10 @@
+ // Contenido para: src/components/tabs/AttendanceManager.tsx
 import { useState } from 'react';
 import { Download, Save } from 'lucide-react';
 import { styles } from '../../styles';
-import { useAppContext } from '../../context/AppContext'; // [!code ++]
-import type { Student, Attendance } from '../../types';
+import { useAppContext } from '../../context/AppContext';
+import type { Attendance } from '../../types'; // [!code --]
+import type { Attendance } from '../../types'; // [!code ++]
 
 interface AttendanceManagerProps {
     onSave: (data: Omit<Attendance, 'id' | 'childId'> & {childId: number}) => void;
@@ -10,7 +12,7 @@ interface AttendanceManagerProps {
 }
 
 const AttendanceManager = ({ onSave, onExport }: AttendanceManagerProps) => {
-    const { students, attendance } = useAppContext(); // [!code ++]
+    const { students, attendance } = useAppContext();
     const today = new Date().toISOString().split('T')[0];
     const [attendanceData, setAttendanceData] = useState<Record<number, Partial<Omit<Attendance, 'id' | 'childId' | 'childName' | 'date'>>>>({});
     const [searchTerm, setSearchTerm] = useState('');
