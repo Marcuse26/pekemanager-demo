@@ -1,30 +1,23 @@
 // Contenido para: src/App.tsx
-
-// --- Importaciones de React y Librerías ---
-import { useState, useEffect, useCallback } from 'react';
-import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
+import { useState, useCallback, useEffect } from 'react';
+import { collection, doc, addDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 // @ts-ignore
 import autoTable from 'jspdf-autotable';
-
-// --- Importaciones de Iconos ---
 import {
     Users, Clock, FileText, DollarSign, UserPlus, LogOut,
     Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck,
     Settings as SettingsIcon, History, HelpCircle
 } from 'lucide-react';
 
-// --- Importaciones de nuestro código modularizado (Fase 3) ---
-import { db, ensureAnonymousAuth } from './firebase/config';
-import { schedules } from './config/schedules';
+// --- Importaciones de nuestro código ---
+import { db } from './firebase/config';
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
-import type {
-    Student, Attendance, Penalty, Invoice, StaffTimeLog, Config, AppHistoryLog,
-    NotificationMessage, StudentFormData, HistoryLog, Document
-} from './types';
+import { useAppContext } from './context/AppContext'; // ¡Importamos nuestro hook!
+import type { Student, Invoice, StaffTimeLog, Config, AppHistoryLog, NotificationMessage, StudentFormData, HistoryLog, Document, Penalty } from './types';
 
-// --- Importaciones de Componentes de UI (Fase 4) ---
+// --- Importaciones de Componentes ---
 import { MiPequenoRecreoLogo } from './components/common/Logos';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Notification } from './components/common/Notification';
@@ -33,8 +26,6 @@ import LoginScreen from './components/LoginScreen';
 import StaffControlPanel from './components/StaffControlPanel';
 import StudentDetailModal from './components/modals/StudentDetailModal';
 import StudentPersonalCalendar from './components/modals/StudentPersonalCalendar';
-
-// --- Importaciones de las Pestañas (Tabs) ---
 import Dashboard from './components/tabs/Dashboard';
 import NewStudentForm from './components/tabs/NewStudentForm';
 import StudentList from './components/tabs/StudentList';
@@ -47,12 +38,12 @@ import AppHistoryViewer from './components/tabs/AppHistoryViewer';
 import Settings from './components/tabs/Settings';
 import Help from './components/tabs/Help';
 
-// --- FIN DE IMPORTACIONES ---
 
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN (EL "SHELL" O CONTENEDOR) ---
 const App = () => {
-
-  // --- Estados de la Aplicación ---
+  // Obtenemos todos los datos y el estado de carga desde el contexto
+  const { students, attendance, invoices, penalties, config, schedules, staffTimeLogs, appHistory, isLoading, userId } = useAppContext();
+  
+  // Estados locales que solo le importan a App.tsx
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
   const [currentUser, setCurrentUser] = useState<string>(() => sessionStorage.getItem('currentUser') || 'invitado');
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -60,108 +51,40 @@ const App = () => {
   const [viewingCalendarForStudent, setViewingCalendarForStudent] = useState<Student | null>(null);
   const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => {} });
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
+  
   const appId = 'pekemanager-app';
 
-  // --- Datos de Firestore ---
-  const [config, setConfig] = useState<Config>({ centerName: 'mi pequeño recreo', currency: '€', lateFee: 6 });
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [children, setChildren] = useState<Student[]>([]);
-  const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [penalties, setPenalties] = useState<Penalty[]>([]);
-  const [appHistory, setAppHistory] = useState<AppHistoryLog[]>([]);
-  const [staffTimeLogs, setStaffTimeLogs] = useState<StaffTimeLog[]>([]);
-
-  // ... (código de inicialización y listeners de Firebase sin cambios) ...
-  useEffect(() => {
-    const unsubscribe = ensureAnonymousAuth(
-        (uid) => {
-            setUserId(uid);
-            setIsLoading(false);
-        },
-        () => {
-            setIsLoading(false);
-            alert("Error crítico: No se pudo conectar a la base de datos.");
-        }
-    );
-    return () => unsubscribe();
-  }, []);
-
-  const dataListeners = [
-      { name: 'children', setter: setChildren },
-      { name: 'attendance', setter: setAttendance },
-      { name: 'penalties', setter: setPenalties },
-      { name: 'invoices', setter: setInvoices },
-      { name: 'appHistory', setter: setAppHistory },
-      { name: 'staffTimeLog', setter: setStaffTimeLogs },
-  ];
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const unsubscribers = dataListeners.map(({ name, setter }) => {
-        const collectionPath = `/artifacts/${appId}/public/data/${name}`;
-        const q = query(collection(db, collectionPath));
-        return onSnapshot(q, (querySnapshot) => {
-            const data = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setter(data as any);
-        }, (error) => console.error(`Error fetching ${name}:`, error));
-    });
-
-    const configDocPath = `/artifacts/${appId}/public/data/settings/config`;
-    const unsubConfig = onSnapshot(doc(db, configDocPath), (docSnap) => {
-        if (docSnap.exists()) {
-            setConfig(docSnap.data() as Config);
-        } else {
-             setDoc(doc(db, configDocPath), config);
-        }
-    }, (error) => console.error("Error fetching config:", error));
-
-    unsubscribers.push(unsubConfig);
-
-    return () => unsubscribers.forEach(unsub => unsub());
-
-  }, [userId]);
-
+  // Actualizar el modal si los datos del alumno cambian
   useEffect(() => {
       if(selectedChild) {
-          const freshStudentData = children.find(c => c.id === selectedChild.id);
+          const freshStudentData = students.find(c => c.id === selectedChild.id);
           if (freshStudentData) {
               setSelectedChild(freshStudentData);
           } else {
               setSelectedChild(null);
           }
       }
-  }, [children, selectedChild]);
-
-  // --- LÓGICA DE NEGOCIO (HANDLERS) ---
+  }, [students, selectedChild]);
 
   const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
 
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
-    const newLog = {
-        user,
-        action,
-        details,
-        timestamp: new Date().toISOString(),
-    };
+    const newLog = { user, action, details, timestamp: new Date().toISOString() };
     try {
-        const historyCollectionPath = `/artifacts/${appId}/public/data/appHistory`;
-        await addDoc(collection(db, historyCollectionPath), newLog);
+        await addDoc(collection(db, `/artifacts/${appId}/public/data/appHistory`), newLog);
     } catch (error) {
         console.error("Error logging history:", error);
     }
   }, [userId, appId]);
 
+  // Lógica de actualización silenciosa de facturas (sin cambios)
   useEffect(() => {
-    if (isLoading || !userId || children.length === 0) return;
+    if (isLoading || !userId || students.length === 0) return;
 
     const currentBillingMonth = new Date().getMonth();
     const currentBillingYear = new Date().getFullYear();
-
     const firstDayThisMonth = new Date(currentBillingYear, currentBillingMonth, 1);
     const lastDayThisMonth = new Date(currentBillingYear, currentBillingMonth + 1, 0);
 
@@ -169,43 +92,32 @@ const App = () => {
         if (!student.startMonth) return false;
         const startDate = new Date(student.startMonth);
         const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-        const startsBeforeOrDuringMonth = startDate <= lastDayThisMonth;
-        const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
-        return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
+        return startDate <= lastDayThisMonth && (!endDate || endDate >= firstDayThisMonth);
     }
 
     const runSilentInvoiceUpdate = async () => {
-        for (const child of children) {
+        for (const child of students) {
             if (!isStudentActiveThisMonth(child)) continue;
-
             const schedule = schedules.find(s => s.id === child.schedule);
             if (!schedule) continue;
 
             let baseFee = schedule.price;
-
             if (child.startMonth && child.plannedEndMonth) {
                 const startDate = new Date(child.startMonth);
                 const endDate = new Date(child.plannedEndMonth);
-
                 const stayDurationDays = (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24) + 1;
 
                 if (stayDurationDays < 28) {
                     const weeks = Math.ceil(stayDurationDays / 7);
                     baseFee = (schedule.price / 4) * (weeks + 1);
-                } else {
-                    if (currentBillingYear === endDate.getFullYear() && currentBillingMonth === endDate.getMonth()) {
-                        const daysInLastMonth = endDate.getDate();
-                        const weeks = Math.ceil(daysInLastMonth / 7);
-                        baseFee = (schedule.price / 4) * (weeks + 1);
-                    }
+                } else if (currentBillingYear === endDate.getFullYear() && currentBillingMonth === endDate.getMonth()) {
+                    const daysInLastMonth = endDate.getDate();
+                    const weeks = Math.ceil(daysInLastMonth / 7);
+                    baseFee = (schedule.price / 4) * (weeks + 1);
                 }
             }
 
-            const childPenalties = penalties.filter(p =>
-                p.childId === child.numericId &&
-                new Date(p.date).getMonth() === currentBillingMonth &&
-                new Date(p.date).getFullYear() === currentBillingYear
-            );
+            const childPenalties = penalties.filter(p => p.childId === child.numericId && new Date(p.date).getMonth() === currentBillingMonth && new Date(p.date).getFullYear() === currentBillingYear);
             const totalPenalties = childPenalties.reduce((sum, p) => sum + p.amount, 0);
             const extendedScheduleFee = child.extendedSchedule ? 30 : 0;
             let totalAmount = baseFee + totalPenalties + extendedScheduleFee;
@@ -225,37 +137,25 @@ const App = () => {
             };
 
             const invoicesCollectionPath = `/artifacts/${appId}/public/data/invoices`;
-            const existingInvoice = invoices.find(inv =>
-                inv.childId === child.numericId &&
-                new Date(inv.date).getMonth() === currentBillingMonth &&
-                new Date(inv.date).getFullYear() === currentBillingYear
-            );
+            const existingInvoice = invoices.find(inv => inv.childId === child.numericId && new Date(inv.date).getMonth() === currentBillingMonth && new Date(inv.date).getFullYear() === currentBillingYear);
 
             try {
                 if (existingInvoice) {
                     if (existingInvoice.amount !== invoiceData.amount || existingInvoice.base !== invoiceData.base) {
-                        await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), {
-                            ...invoiceData,
-                            numericId: existingInvoice.numericId,
-                            status: existingInvoice.status,
-                        });
+                        await setDoc(doc(db, invoicesCollectionPath, existingInvoice.id), { ...invoiceData, numericId: existingInvoice.numericId, status: existingInvoice.status });
                     }
                 } else {
-                    await addDoc(collection(db, invoicesCollectionPath), {
-                        ...invoiceData,
-                        status: 'Pendiente' as Invoice['status'],
-                    });
+                    await addDoc(collection(db, invoicesCollectionPath), { ...invoiceData, status: 'Pendiente' as Invoice['status'] });
                 }
-            } catch(e) {
-                console.error("Error auto-updating invoice for ", child.name, e)
-            }
+            } catch(e) { console.error("Error auto-updating invoice for ", child.name, e) }
         }
     };
-
     runSilentInvoiceUpdate();
-
-  }, [children, penalties, config, schedules, userId, isLoading, invoices, appId]);
-
+  }, [students, penalties, config, schedules, userId, isLoading, invoices, appId]);
+  
+  
+  // --- TODAS LAS FUNCIONES HANDLER SE MANTIENEN AQUÍ POR AHORA ---
+  // El siguiente paso sería moverlas también a hooks o al contexto.
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
     const today = new Date();
@@ -274,7 +174,7 @@ const App = () => {
 
     switch (dataType) {
         case 'alumnos':
-            const sortedChildren = [...children].sort((a, b) =>
+            const sortedChildren = [...students].sort((a, b) =>
                 `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)
             );
              dataToExport = sortedChildren.map(c => ({
@@ -314,7 +214,7 @@ const App = () => {
 
         case 'facturacion':
             const activeStudentIds = new Set(
-                children
+                students
                     .filter(isStudentActiveThisMonth)
                     .map(c => c.numericId)
             );
@@ -478,7 +378,7 @@ const App = () => {
 
     const handleUpdateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, user: string) => {
         if (!userId) return;
-        const originalStudent = children.find(c => c.id === studentId);
+        const originalStudent = students.find(c => c.id === studentId);
         if (!originalStudent) return;
 
         let changesDescription = '';
@@ -516,7 +416,7 @@ const App = () => {
     };
 
     const handleAddDocument = async (studentId: string, documentData: Document, user: string) => {
-        const student = children.find(c => c.id === studentId);
+        const student = students.find(c => c.id === studentId);
         if (!student || !userId) return;
 
         const updatedDocuments = [...(student.documents || []), documentData];
@@ -547,7 +447,7 @@ const App = () => {
         addAppHistoryLog(currentUser, 'Asistencia', `Se ha guardado la asistencia para ${attendanceData.childName} el ${attendanceData.date}.`);
 
         if (attendanceData.exitTime) {
-            const child = children.find(c => c.numericId === attendanceData.childId);
+            const child = students.find(c => c.numericId === attendanceData.childId);
             const schedule = schedules.find(s => s.id === child?.schedule);
             if (!child || !schedule) return;
             const [endH, endM] = schedule.endTime.split(':').map(Number);
@@ -717,17 +617,13 @@ const App = () => {
   const handleGenerateAndExportInvoice = async (student: Student) => {
     handleGeneratePDFInvoice(student, undefined);
   };
-
-    // --- INICIO DE CAMBIO: Lógica de generación de PDF actualizada ---
-    const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
+  
+  const handleGeneratePDFInvoice = (student: Student, invoice: Invoice | undefined) => {
         if (!student) {
             addNotification("Error: No se ha seleccionado un alumno.");
             return;
         }
-
         let finalInvoice = invoice;
-
-        // Si no se pasa una factura (ej: desde la ficha del alumno), la buscamos o la creamos
         if (!finalInvoice) {
             let targetMonth = new Date().getMonth();
             let targetYear = new Date().getFullYear();
@@ -737,25 +633,16 @@ const App = () => {
             if (student.startMonth) {
                 const startDate = new Date(student.startMonth);
                 startDate.setHours(0,0,0,0);
-                // Si el alumno empieza en un mes futuro, la factura se genera para ese mes
                 if (startDate > today && startDate.getMonth() > today.getMonth()) {
                     targetMonth = startDate.getMonth();
                     targetYear = startDate.getFullYear();
                 }
             }
-
-            finalInvoice = invoices.find(inv =>
-                inv.childId === student.numericId &&
-                new Date(inv.date).getMonth() === targetMonth &&
-                new Date(inv.date).getFullYear() === targetYear
-            );
+            finalInvoice = invoices.find(inv => inv.childId === student.numericId && new Date(inv.date).getMonth() === targetMonth && new Date(inv.date).getFullYear() === targetYear);
         }
-
         if (!finalInvoice) {
             const schedule = schedules.find(s => s.id === student.schedule);
             if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
-
-            // Re-calculamos la cuota base aplicando la nueva lógica
             let baseFee = schedule.price;
             if (student.startMonth && student.plannedEndMonth) {
                 const startDate = new Date(student.startMonth);
@@ -766,12 +653,10 @@ const App = () => {
                     baseFee = (schedule.price / 4) * (weeks + 1);
                 }
             }
-
-            const totalPenalties = 0; // No se calculan penalizaciones para facturas generadas al momento
+            const totalPenalties = 0;
             const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
             const enrollmentFee = !student.enrollmentPaid ? 100 : 0;
             const totalAmount = baseFee + totalPenalties + extendedScheduleFee + enrollmentFee;
-
             finalInvoice = {
                 id: 'temp',
                 numericId: Date.now(),
@@ -786,7 +671,6 @@ const App = () => {
                 extendedScheduleFee,
             };
         }
-
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
@@ -811,11 +695,9 @@ const App = () => {
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
-
         if (finalInvoice.enrollmentFeeIncluded) {
             tableRows.push(["Matrícula", "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
         }
-
         let conceptText = `Jardín de infancia (${new Date(finalInvoice.date).toLocaleString('es-ES', { month: 'long' })})`;
         if (student.startMonth && student.plannedEndMonth) {
             const startDate = new Date(student.startMonth);
@@ -827,17 +709,13 @@ const App = () => {
             }
         }
         tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
-
         if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
             tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
         }
-
         if(finalInvoice.penalties > 0) {
             tableRows.push([`Penalizaciones por retraso`, "", "", `${finalInvoice.penalties.toFixed(2)} ${config.currency}`]);
         }
-
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
-
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -852,39 +730,24 @@ const App = () => {
                 doc.setTextColor('#c55a33');
                 doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
             },
-            columnStyles: {
-                2: { halign: 'right' },
-                3: { halign: 'right' },
-            }
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
         });
-
         doc.save(`factura_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura PDF para ${student.name}.`);
     };
 
-    // --- INICIO DE CAMBIO: Nueva función para factura del mes siguiente ---
     const handleGenerateNextMonthPDFInvoice = (student: Student) => {
-        if (!student) {
-            addNotification("Error: No se ha seleccionado un alumno.");
-            return;
-        }
-
-        // --- CORRECCIÓN: Lógica para determinar correctamente los detalles del mes siguiente ---
+        if (!student) { addNotification("Error: No se ha seleccionado un alumno."); return; }
         const today = new Date();
         const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const targetMonth = nextMonthDate.getMonth();
         const targetYear = nextMonthDate.getFullYear();
-
-        // Se crea siempre un objeto de factura temporal para asegurar que los datos del PDF son correctos
         const schedule = schedules.find(s => s.id === student.schedule);
         if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
-
         const baseFee = schedule.price;
         const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
         const totalAmount = baseFee + extendedScheduleFee;
         const nextMonthDateString = new Date(targetYear, targetMonth, 1).toISOString().split('T')[0];
-
-        // Usamos este objeto 'finalInvoice' para rellenar el PDF
         const finalInvoice: Invoice = {
             id: 'temp_next',
             numericId: Date.now(),
@@ -898,7 +761,6 @@ const App = () => {
             status: 'Pendiente',
             extendedScheduleFee,
         };
-
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
@@ -911,10 +773,7 @@ const App = () => {
         doc.text("CIF: B21898341", 20, 45);
         doc.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
         doc.text(`Factura Nº: ${new Date(finalInvoice.date).getFullYear()}-${String(finalInvoice.numericId).slice(-4)}`, 190, 40, { align: 'right' });
-
-        // --- CORRECCIÓN 1: Usar la fecha actual para la fecha de emisión ---
         doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
-
         doc.setDrawColor(220, 220, 220);
         doc.rect(15, 60, 180, 25);
         doc.setFont('Helvetica', 'bold');
@@ -926,17 +785,12 @@ const App = () => {
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
-
-        // --- CORRECCIÓN 2: Usar la fecha del mes siguiente (bien calculada) para el concepto ---
         let conceptText = `Jardín de infancia (${nextMonthDate.toLocaleString('es-ES', { month: 'long' })})`;
         tableRows.push([conceptText, "1", `${finalInvoice.base.toFixed(2)} ${config.currency}`, `${finalInvoice.base.toFixed(2)} ${config.currency}`]);
-
         if (finalInvoice.extendedScheduleFee && finalInvoice.extendedScheduleFee > 0) {
             tableRows.push([`Suplemento Horario Ampliado`, "1", `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`, `${finalInvoice.extendedScheduleFee.toFixed(2)} ${config.currency}`]);
         }
-
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${finalInvoice.amount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
-
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -951,38 +805,22 @@ const App = () => {
                 doc.setTextColor('#c55a33');
                 doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
             },
-            columnStyles: {
-                2: { halign: 'right' },
-                3: { halign: 'right' },
-            }
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
         });
-
         doc.save(`factura_adelantada_${student.name}_${student.surname}_${finalInvoice.date}.pdf`);
         addNotification(`Generando factura del próximo mes para ${student.name}.`);
     };
-    // --- FIN DE CAMBIO ---
 
-    // --- INICIO DE CAMBIO: Nueva función para factura de meses anteriores ---
     const handleGeneratePastMonthsInvoice = (student: Student) => {
         const today = new Date();
         const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-        const studentPastInvoices = invoices
-            .filter(inv =>
-                inv.childId === student.numericId && new Date(inv.date) < firstDayCurrentMonth
-            )
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
+        const studentPastInvoices = invoices.filter(inv => inv.childId === student.numericId && new Date(inv.date) < firstDayCurrentMonth).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         if (studentPastInvoices.length === 0) {
             addNotification(`No hay facturas de meses anteriores para ${student.name}.`);
             return;
         }
-
         const totalAmount = studentPastInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const conceptMonths = studentPastInvoices
-            .map(inv => new Date(inv.date).toLocaleString('es-ES', { month: 'long', year: 'numeric' }))
-            .join(', ');
-
+        const conceptMonths = studentPastInvoices.map(inv => new Date(inv.date).toLocaleString('es-ES', { month: 'long', year: 'numeric' })).join(', ');
         const doc = new jsPDF();
         doc.setFont('Helvetica', 'bold');
         doc.setFontSize(32);
@@ -1007,16 +845,8 @@ const App = () => {
         doc.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
         const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
         const tableRows = [];
-
-        tableRows.push([
-            `Cuotas de meses anteriores (${conceptMonths})`,
-            "1",
-            `${totalAmount.toFixed(2)} ${config.currency}`,
-            `${totalAmount.toFixed(2)} ${config.currency}`
-        ]);
-
+        tableRows.push([ `Cuotas de meses anteriores (${conceptMonths})`, "1", `${totalAmount.toFixed(2)} ${config.currency}`, `${totalAmount.toFixed(2)} ${config.currency}` ]);
         tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
-
         autoTable(doc, {
             startY: 90,
             head: [tableColumn],
@@ -1031,20 +861,12 @@ const App = () => {
                 doc.setTextColor('#c55a33');
                 doc.text("mi pequeño recreo", 105, (doc.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
             },
-            columnStyles: {
-                2: { halign: 'right' },
-                3: { halign: 'right' },
-            }
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
         });
-
         doc.save(`factura_total_anterior_${student.name}_${student.surname}.pdf`);
         addNotification(`Generando factura total anterior para ${student.name}.`);
     };
-    // --- FIN DE CAMBIO ---
 
-
-  // --- RENDERIZADO PRINCIPAL (EL SHELL) ---
-  // ... (código de renderizado sin cambios) ...
   const todayForLog = new Date();
   const yearForLog = todayForLog.getFullYear();
   const monthStrForLog = String(todayForLog.getMonth() + 1).padStart(2, '0');
@@ -1056,41 +878,19 @@ const App = () => {
 
   const renderTabContent = () => {
       switch(activeTab) {
-          case 'dashboard':
-              return <Dashboard students={children} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
-          case 'inscripciones':
-              return <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />;
-          case 'alumnos':
-              return <StudentList students={children} onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />;
-          case 'asistencia':
-              return <AttendanceManager students={children} attendance={attendance} onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />;
-          case 'calendario':
-              return <CalendarView attendance={attendance} />;
-          case 'facturacion':
-              return <Invoicing
-                  invoices={invoices}
-                  onUpdateStatus={handleUpdateInvoiceStatus}
-                  config={config}
-                  onExport={() => handleExport('facturacion')}
-                  students={children}
-                  onGeneratePastInvoice={handleGeneratePDFInvoice}
-                  onDeleteInvoice={handleDeleteInvoice}
-                  onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice}
-              />;
-          case 'penalizaciones':
-              return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
-          case 'control':
-              return <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />;
-          case 'personal':
-              return <StaffLogViewer logs={staffTimeLogs} onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />;
-          case 'historial':
-              return <AppHistoryViewer history={appHistory} onExport={() => handleExport('historial')} />;
-          case 'configuracion':
-              return <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />;
-          case 'ayuda':
-              return <Help />;
-          default:
-              return <Dashboard students={children} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
+          case 'dashboard': return <Dashboard students={students} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
+          case 'inscripciones': return <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />;
+          case 'alumnos': return <StudentList students={students} onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />;
+          case 'asistencia': return <AttendanceManager students={students} attendance={attendance} onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />;
+          case 'calendario': return <CalendarView attendance={attendance} />;
+          case 'facturacion': return <Invoicing invoices={invoices} onUpdateStatus={handleUpdateInvoiceStatus} config={config} onExport={() => handleExport('facturacion')} students={students} onGeneratePastInvoice={handleGeneratePDFInvoice} onDeleteInvoice={handleDeleteInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />;
+          case 'penalizaciones': return <PenaltiesViewer penalties={penalties} config={config} onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />;
+          case 'control': return <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />;
+          case 'personal': return <StaffLogViewer logs={staffTimeLogs} onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />;
+          case 'historial': return <AppHistoryViewer history={appHistory} onExport={() => handleExport('historial')} />;
+          case 'configuracion': return <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />;
+          case 'ayuda': return <Help />;
+          default: return <Dashboard students={students} attendance={attendance} invoices={invoices} schedules={schedules} config={config} />;
       }
   }
 
@@ -1100,96 +900,23 @@ const App = () => {
   return (
     <>
       <div style={styles.notificationContainer}>{notifications.map(n => <Notification key={n.id} message={n.message} onClose={() => setNotifications(p => p.filter(item => item.id !== n.id))} />)}</div>
-
-      {confirmModal.isOpen && (
-          <ConfirmModal
-              message={confirmModal.message}
-              onConfirm={confirmModal.onConfirm}
-              onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} })}
-          />
-      )}
-
-      {/* --- INICIO DE CAMBIO: Pasar las nuevas props al modal --- */}
-      {selectedChild && <StudentDetailModal
-          student={selectedChild}
-          onClose={() => setSelectedChild(null)}
-          schedules={schedules}
-          onViewPersonalCalendar={(student) => {
-              setSelectedChild(null);
-              setViewingCalendarForStudent(student);
-          }}
-          onUpdate={handleUpdateStudent}
-          onAddDocument={handleAddDocument}
-          onGenerateAndExportInvoice={handleGenerateAndExportInvoice}
-          onGenerateAndExportNextMonthInvoice={handleGenerateNextMonthPDFInvoice}
-          onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice}
-          currentUser={currentUser}
-          invoices={invoices}
-      />}
-      {/* --- FIN DE CAMBIO --- */}
-
-      {viewingCalendarForStudent && <StudentPersonalCalendar
-          student={viewingCalendarForStudent}
-          onClose={() => setViewingCalendarForStudent(null)}
-          attendance={attendance}
-          penalties={penalties}
-      />}
+      {confirmModal.isOpen && <ConfirmModal message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} })} />}
+      {selectedChild && <StudentDetailModal student={selectedChild} onClose={() => setSelectedChild(null)} schedules={schedules} onViewPersonalCalendar={(student) => { setSelectedChild(null); setViewingCalendarForStudent(student); }} onUpdate={handleUpdateStudent} onAddDocument={handleAddDocument} onGenerateAndExportInvoice={handleGenerateAndExportInvoice} onGenerateAndExportNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} currentUser={currentUser} invoices={invoices} />}
+      {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} attendance={attendance} penalties={penalties} />}
 
       <div style={styles.appContainer}>
         <aside style={styles.sidebar}>
           <div>
             <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
-
             <h2 style={styles.sidebarTitle}>General</h2>
-            {[
-              { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 },
-              { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus },
-              { id: 'alumnos', name: 'Alumnos', icon: Users },
-              { id: 'asistencia', name: 'Asistencia', icon: Clock },
-              { id: 'calendario', name: 'Calendario', icon: CalendarIcon },
-            ].map(tab => {
-              const Icon = tab.icon; const isActive = activeTab === tab.id;
-              return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
-            })}
-
+            {[ { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 }, { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus }, { id: 'alumnos', name: 'Alumnos', icon: Users }, { id: 'asistencia', name: 'Asistencia', icon: Clock }, { id: 'calendario', name: 'Calendario', icon: CalendarIcon } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
             <h2 style={{...styles.sidebarTitle, marginTop: '20px'}}>Administración</h2>
-            {[
-              { id: 'facturacion', name: 'Facturación', icon: FileText },
-              { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign },
-            ].map(tab => {
-              const Icon = tab.icon; const isActive = activeTab === tab.id;
-              return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
-            })}
-
-            {currentUser !== 'Gonzalo Navarro' && (
-              <>
-                <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}>
-                    <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span>
-                </button>
-                <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}>
-                    <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span>
-                </button>
-              </>
-            )}
-
-            {currentUser === 'Gonzalo Navarro' && (
-              <>
-                {[
-                  { id: 'personal', name: 'Personal', icon: Briefcase },
-                  { id: 'historial', name: 'Historial Web', icon: History },
-                  { id: 'configuracion', name: 'Configuración', icon: SettingsIcon },
-                ].map(tab => {
-                  const Icon = tab.icon; const isActive = activeTab === tab.id;
-                  return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>);
-                })}
-              </>
-            )}
-
+            {[ { id: 'facturacion', name: 'Facturación', icon: FileText }, { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
+            {currentUser !== 'Gonzalo Navarro' && ( <> <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </> )}
+            {currentUser === 'Gonzalo Navarro' && ( <> {[ { id: 'personal', name: 'Personal', icon: Briefcase }, { id: 'historial', name: 'Historial Web', icon: History }, { id: 'configuracion', name: 'Configuración', icon: SettingsIcon }, ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })} </> )}
           </div>
           <div>
-            <div style={styles.currentUserInfo}>
-              <p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p>
-            </div>
+            <div style={styles.currentUserInfo}><p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p></div>
             <footer style={styles.sidebarFooter}>
                 <p style={{margin: '2px 0', fontWeight: 'bold'}}>Vision Paideia SLU</p>
                 <p style={{margin: '2px 0'}}>B21898341</p>
@@ -1201,13 +928,9 @@ const App = () => {
         <main style={styles.mainContent}>
           <header style={styles.header}>
             <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-             <button onClick={handleLogout} style={styles.logoutButton}>
-                <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión
-             </button>
+             <button onClick={handleLogout} style={styles.logoutButton}> <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión </button>
           </header>
-          <div style={styles.contentArea}>
-            {renderTabContent()}
-          </div>
+          <div style={styles.contentArea}> {renderTabContent()} </div>
         </main>
       </div>
     </>
