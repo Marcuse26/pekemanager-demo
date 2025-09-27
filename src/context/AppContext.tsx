@@ -6,7 +6,6 @@ import { db, ensureAnonymousAuth } from '../firebase/config';
 import { schedules as defaultSchedules } from '../config/schedules';
 import type { Student, Invoice, Attendance, Penalty, Config, Schedule, StaffTimeLog, AppHistoryLog, Document, HistoryLog } from '../types';
 
-// Definimos una interfaz más completa para el contexto
 interface AppContextType {
   students: Student[];
   invoices: Invoice[];

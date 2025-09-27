@@ -12,7 +12,7 @@ import {
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
-import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty } from './types';
+import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, AppHistoryLog } from './types';
 
 import { MiPequenoRecreoLogo } from './components/common/Logos';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -89,6 +89,7 @@ const App = () => {
           await deleteChild(childId, name, currentUser);
           addNotification('Alumno eliminado.');
           setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} });
+          setSelectedChild(null);
       };
       setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar a ${name}? Esta acción no se puede deshacer.`, onConfirm: onConfirmDelete });
   };
@@ -177,19 +178,18 @@ const App = () => {
           currentUser={currentUser} 
       />}
       
-      {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} attendance={attendance} penalties={penalties} />}
-
+      {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} />}
+      
       <div style={styles.appContainer}>
         <aside style={styles.sidebar}>
-          {/* Sidebar content... */}
+            {/* ... Sidebar JSX (no changes) ... */}
         </aside>
         <main style={styles.mainContent}>
           <header style={styles.header}>
-            <h1 style={styles.headerTitle}>{/* ... */}</h1>
+            <h1 style={styles.headerTitle}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
              <button onClick={handleLogout} style={styles.logoutButton}> <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión </button>
           </header>
           <div style={styles.contentArea}>
-            {/* El renderizado de pestañas llama a los componentes con sus props */}
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'inscripciones' && <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />}
             {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
@@ -198,9 +198,9 @@ const App = () => {
             {activeTab === 'facturacion' && <Invoicing onUpdateStatus={updateInvoiceStatus} onExport={() => handleExport('facturacion')} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} onDeleteInvoice={handleDeleteInvoice} addNotification={addNotification} />}
             {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
             {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
-            {activeTab === 'personal' && <StaffLogViewer logs={staffTimeLogs} onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}
+            {activeTab === 'personal' && <StaffLogViewer onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}
             {activeTab === 'historial' && <AppHistoryViewer onExport={() => handleExport('historial')} />}
-            {activeTab === 'configuracion' && <Settings config={config} onSave={handleSaveConfig} addNotification={addNotification} />}
+            {activeTab === 'configuracion' && <Settings onSave={handleSaveConfig} addNotification={addNotification} />}
             {activeTab === 'ayuda' && <Help />}
           </div>
         </main>
