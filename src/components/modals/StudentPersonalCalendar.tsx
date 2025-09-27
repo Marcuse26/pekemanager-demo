@@ -1,3 +1,4 @@
+// Contenido para: src/components/modals/StudentPersonalCalendar.tsx
 import { useState, useRef } from 'react';
 import { DollarSign, Printer, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { styles } from '../../styles';
@@ -19,7 +20,30 @@ const StudentPersonalCalendar = ({ student, onClose }: { student: Student; onClo
         if (calendarNode) {
             const monthName = currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
             const printWindow = window.open('', '_blank');
-            printWindow?.document.write(`<html>...</html>`); // Contenido del HTML para imprimir
+            printWindow?.document.write(`
+                <html>
+                    <head>
+                        <title>Calendario de ${student.name} ${student.surname} - ${monthName}</title>
+                        <style>
+                            body { font-family: system-ui, sans-serif; }
+                            h1, h2 { text-align: center; }
+                            .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; border: 1px solid #ccc; padding: 5px; }
+                            .week-day { font-weight: bold; text-align: center; padding: 5px; background-color: #f2f2f2; }
+                            .day-cell { border: 1px solid #eee; min-height: 80px; padding: 5px; font-size: 12px; }
+                            .day-number { font-weight: bold; }
+                            .event-pill { background-color: #e9f3ff; color: #004085; border-radius: 4px; padding: 3px; margin-top: 5px; text-align: center; }
+                            .penalty-pill { background-color: #fff3cd; color: #856404; border-radius: 4px; padding: 3px; margin-top: 5px; text-align: center; }
+                            .day-cell-empty { border: 1px solid transparent; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>mi pequeño recreo</h1>
+                        <h2>Calendario de Asistencia: ${student.name} ${student.surname}</h2>
+                        <h3>${monthName.toUpperCase()}</h3>
+                        <div class="calendar-grid">${calendarNode.innerHTML}</div>
+                    </body>
+                </html>
+            `);
             printWindow?.document.close();
             printWindow?.print();
         }
@@ -43,8 +67,16 @@ const StudentPersonalCalendar = ({ student, onClose }: { student: Student; onClo
             cells.push(
                 <div key={day} style={styles.dayCell}>
                     <div style={styles.dayNumber}>{day}</div>
-                    {attendanceRecord && (<div style={styles.eventPill}>{attendanceRecord.entryTime} - {attendanceRecord.exitTime}</div>)}
-                    {penaltyRecord && (<div style={styles.penaltyPill} title={`Motivo: ${penaltyRecord.reason}`}><DollarSign size={11} style={{marginRight: '4px'}}/> {penaltyRecord.amount}€</div>)}
+                    {attendanceRecord && (
+                        <div style={styles.eventPill}>
+                            {attendanceRecord.entryTime} - {attendanceRecord.exitTime}
+                        </div>
+                    )}
+                    {penaltyRecord && (
+                         <div style={styles.penaltyPill} title={`Motivo: ${penaltyRecord.reason}`}>
+                            <DollarSign size={11} style={{marginRight: '4px'}}/> {penaltyRecord.amount}€
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -72,4 +104,5 @@ const StudentPersonalCalendar = ({ student, onClose }: { student: Student; onClo
       </div>
     );
 };
+
 export default StudentPersonalCalendar;
