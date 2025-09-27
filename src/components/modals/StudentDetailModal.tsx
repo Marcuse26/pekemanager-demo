@@ -30,20 +30,17 @@ const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate
     useEffect(() => { setEditedStudent(student); }, [student]);
 
     const { isStudentActiveThisMonth, isStudentActiveNextMonth } = useMemo(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
         const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-
         const checkActivity = (targetStudent: Student, firstDay: Date, lastDay: Date): boolean => {
             if (!targetStudent.startMonth) return false;
             const startDate = new Date(targetStudent.startMonth);
             const endDate = targetStudent.plannedEndMonth ? new Date(targetStudent.plannedEndMonth) : null;
             return startDate <= lastDay && (!endDate || endDate >= firstDay);
         };
-        
         return {
             isStudentActiveThisMonth: checkActivity(student, firstDayThisMonth, lastDayThisMonth),
             isStudentActiveNextMonth: checkActivity(student, firstDayNextMonth, lastDayNextMonth)
@@ -84,7 +81,7 @@ const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate
         }
     };
     
-    const getScheduleName = (id: string) => schedules.find(s => s.id === id)?.name || 'No especificado';
+    const getScheduleName = (id: string | undefined) => schedules.find(s => s.id === id)?.name || 'No especificado';
     
     return (
         <div style={styles.modalBackdrop}>
@@ -124,10 +121,21 @@ const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate
                     </div>
                     <div style={{...styles.modalSection, gridColumn: '1 / -1'}}>
                         <h3 style={styles.modalSectionTitle}>Cuotas y Pagos</h3>
-                        <p><strong>Horario:</strong> {isEditing ? 
+                        <p><strong>Horario Actual:</strong> {isEditing ? 
                             <select name="schedule" value={editedStudent.schedule} onChange={handleInputChange} style={styles.formInputSmall}>{schedules.map(s => <option key={s.id} value={s.id}>{s.name} ({s.price}€)</option>)}</select> 
                             : getScheduleName(student.schedule)}
                         </p>
+                        {isEditing && (
+                            <p><strong>Horario Próximo Mes:</strong>
+                                <select name="nextMonthSchedule" value={editedStudent.nextMonthSchedule || ''} onChange={handleInputChange} style={styles.formInputSmall}>
+                                    <option value="">-- Sin cambios --</option>
+                                    {schedules.map(s => <option key={s.id} value={s.id}>{s.name} ({s.price}€)</option>)}
+                                </select> 
+                            </p>
+                        )}
+                        {!isEditing && student.nextMonthSchedule && (
+                            <p><strong>Próximo Mes:</strong> {getScheduleName(student.nextMonthSchedule)}</p>
+                        )}
                         <p><strong>Método de Pago:</strong> {isEditing ? 
                             <select name="paymentMethod" value={editedStudent.paymentMethod} onChange={handleInputChange} style={styles.formInputSmall}>
                                 <option value="Cheque guardería">Cheque guardería</option>

@@ -30,9 +30,8 @@ export interface Student {
   modificationHistory: HistoryLog[];
   startMonth?: string;
   plannedEndMonth?: string;
-  // --- INICIO DE CAMBIO ---
   extendedSchedule?: boolean; // Suplemento de horario ampliado
-  // --- FIN DE CAMBIO ---
+  nextMonthSchedule?: string; // --- CAMBIO AÑADIDO --- Horario para el próximo mes
 }
 
 export type Attendance = { id: string; childId: number; childName: string; date: string; entryTime?: string; exitTime?: string; droppedOffBy?: string; pickedUpBy?: string; };
@@ -49,9 +48,7 @@ export interface Invoice {
   penalties: number;
   enrollmentFeeIncluded: boolean;
   status: 'Pendiente' | 'Pagada' | 'Vencida';
-  // --- INICIO DE CAMBIO ---
   extendedScheduleFee?: number; // Tarifa de horario ampliado aplicada
-  // --- FIN DE CAMBIO ---
 };
 
 
