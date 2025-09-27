@@ -1,5 +1,8 @@
 // Contenido para: src/App.tsx
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+// @ts-ignore
+import autoTable from 'jspdf-autotable';
 import {
     Users, Clock, FileText, DollarSign, UserPlus, LogOut,
     Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck,
@@ -31,207 +34,329 @@ import Settings from './components/tabs/Settings';
 import Help from './components/tabs/Help';
 
 const App = () => {
-  const {
-    students, config, schedules, staffTimeLogs, isLoading,
-    addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
-    updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig,
-    staffCheckIn, staffCheckOut, updateStaffTimeLog
-  } = useAppContext();
-  
-  const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
-  const [currentUser, setCurrentUser] = useState<string>(() => sessionStorage.getItem('currentUser') || 'invitado');
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedChild, setSelectedChild] = useState<Student | null>(null);
-  const [viewingCalendarForStudent, setViewingCalendarForStudent] = useState<Student | null>(null);
-  const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
-  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => {} });
-  const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
+    const {
+        students, config, schedules, staffTimeLogs, isLoading, penalties: allPenalties,
+        addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
+        updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig,
+        staffCheckIn, staffCheckOut, updateStaffTimeLog
+    } = useAppContext();
 
-  useEffect(() => {
-      if(selectedChild) {
-          const freshStudentData = students.find(c => c.id === selectedChild.id);
-          setSelectedChild(freshStudentData || null);
-      }
-  }, [students, selectedChild]);
+    const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
+    const [currentUser, setCurrentUser] = useState<string>(() => sessionStorage.getItem('currentUser') || 'invitado');
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [selectedChild, setSelectedChild] = useState<Student | null>(null);
+    const [viewingCalendarForStudent, setViewingCalendarForStudent] = useState<Student | null>(null);
+    const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => { } });
+    const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
 
-  const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
-  
-  const handleLogin = (username: string) => {
-    setIsLoggedIn(true);
-    setCurrentUser(username);
-    sessionStorage.setItem('isLoggedIn', 'true');
-    sessionStorage.setItem('currentUser', username);
-    addAppHistoryLog(username, 'Inicio de Sesión', `El usuario ${username} ha iniciado sesión.`);
-    setActiveTab('dashboard');
-  };
+    useEffect(() => {
+        if (selectedChild) {
+            const freshStudentData = students.find(c => c.id === selectedChild.id);
+            setSelectedChild(freshStudentData || null);
+        }
+    }, [students, selectedChild]);
 
-  const handleLogout = () => {
-    addAppHistoryLog(currentUser, 'Cierre de Sesión', `El usuario ${currentUser} ha cerrado sesión.`);
-    setIsLoggedIn(false);
-    setCurrentUser('invitado');
-    sessionStorage.removeItem('isLoggedIn');
-    sessionStorage.removeItem('currentUser');
-  };
-  
-  const handleAddChild = async (e: React.FormEvent) => {
-      e.preventDefault();
-      const success = await addChild(childForm, currentUser);
-      if (success) {
-        setChildForm({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
-        addNotification(`Alumno ${childForm.name} inscrito con éxito.`);
-        setActiveTab('alumnos');
-      } else {
-        addNotification("Error al inscribir alumno.");
-      }
-  };
-  
-  const handleDeleteChild = (childId: string, name: string) => {
-      const onConfirmDelete = async () => {
-          await deleteChild(childId, name, currentUser);
-          addNotification('Alumno eliminado.');
-          setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} });
-          setSelectedChild(null);
-      };
-      setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar a ${name}? Esta acción no se puede deshacer.`, onConfirm: onConfirmDelete });
-  };
-  
-  const handleUpdateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, user: string) => {
-      await updateStudent(studentId, updatedData, user);
-      addNotification(`Ficha de ${updatedData.name || ''} guardada.`);
-  };
-  
-  const handleAddDocument = async (studentId: string, documentData: Document, user: string) => {
-      await addDocument(studentId, documentData, user);
-      addNotification(`Documento '${documentData.name}' añadido.`);
-  };
+    const addNotification = (message: string) => { setNotifications(prev => [...prev, { id: Date.now(), message }]); };
 
-  const handleSaveAttendance = async (data: Omit<Attendance, 'id'>) => {
-      await saveAttendance(data, currentUser);
-      addNotification(`Asistencia de ${data.childName} guardada.`);
-  };
-  
-  const handleDeleteInvoice = (invoice: Invoice) => {
-      const onConfirmDelete = async () => {
-          await deleteInvoice(invoice, currentUser);
-          addNotification(`Factura de ${invoice.childName} eliminada.`);
-          setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} });
-      };
-      setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar esta factura de ${invoice.amount}${config.currency} para ${invoice.childName}?`, onConfirm: onConfirmDelete });
-  };
-  
-  const handleUpdatePenalty = async (penaltyId: string, updates: Partial<Omit<Penalty, 'id'>>) => {
-      await updatePenalty(penaltyId, updates, currentUser);
-      addNotification("Penalización actualizada.");
-  };
+    const handleLogin = (username: string) => {
+        setIsLoggedIn(true);
+        setCurrentUser(username);
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('currentUser', username);
+        addAppHistoryLog(username, 'Inicio de Sesión', `El usuario ${username} ha iniciado sesión.`);
+        setActiveTab('dashboard');
+    };
 
-  const handleDeletePenalty = async (penaltyId: string) => {
-      await deletePenalty(penaltyId, currentUser);
-      addNotification("Penalización eliminada.");
-  };
-  
-  const handleSaveConfig = async (newConfig: Config) => {
-      await saveConfig(newConfig);
-      addNotification("Configuración guardada.");
-  };
-  
-  const handleStaffCheckIn = async () => {
-      await staffCheckIn(currentUser);
-      addNotification(`Entrada registrada.`);
-  };
-  
-  const handleStaffCheckOut = async () => {
-      await staffCheckOut(currentUser);
-      addNotification(`Salida registrada.`);
-  };
-  
-  const handleUpdateStaffTimeLog = async (logId: string, updatedData: Partial<StaffTimeLog>) => {
-      await updateStaffTimeLog(logId, updatedData, currentUser);
-      addNotification("Registro de fichaje actualizado.");
-  };
-  
-  const handleExport = (_dataType: string) => {
-    addNotification('La función de exportar aún no está implementada.');
-  };
+    const handleLogout = () => {
+        addAppHistoryLog(currentUser, 'Cierre de Sesión', `El usuario ${currentUser} ha cerrado sesión.`);
+        setIsLoggedIn(false);
+        setCurrentUser('invitado');
+        sessionStorage.removeItem('isLoggedIn');
+        sessionStorage.removeItem('currentUser');
+    };
 
-  const handleGeneratePDFInvoice = (_student: Student) => {
-    addNotification('La generación de facturas PDF aún no está implementada.');
-  };
-  const handleGenerateNextMonthPDFInvoice = (_student: Student) => {
-    addNotification('La generación de facturas PDF aún no está implementada.');
-  };
-  const handleGeneratePastMonthsInvoice = (_student: Student) => {
-    addNotification('La generación de facturas PDF aún no está implementada.');
-  };
+    const handleAddChild = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const success = await addChild(childForm, currentUser);
+        if (success) {
+            setChildForm({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
+            addNotification(`Alumno ${childForm.name} inscrito con éxito.`);
+            setActiveTab('alumnos');
+        } else {
+            addNotification("Error al inscribir alumno.");
+        }
+    };
 
-  if (isLoading) return <LoadingSpinner />;
-  if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
+    const handleDeleteChild = (childId: string, name: string) => {
+        const onConfirmDelete = async () => {
+            await deleteChild(childId, name, currentUser);
+            addNotification('Alumno eliminado.');
+            setConfirmModal({ isOpen: false, message: '', onConfirm: () => { } });
+            setSelectedChild(null);
+        };
+        setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar a ${name}? Esta acción no se puede deshacer.`, onConfirm: onConfirmDelete });
+    };
 
-  const todayForLog = new Date().toISOString().split('T')[0];
-  const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayForLog && log.checkIn && !log.checkOut);
-  const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
+    const handleUpdateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, user: string) => {
+        await updateStudent(studentId, updatedData, user);
+        addNotification(`Ficha de ${updatedData.name || ''} guardada.`);
+    };
 
-  return (
-    <>
-      <div style={styles.notificationContainer}>{notifications.map(n => <Notification key={n.id} message={n.message} onClose={() => setNotifications(p => p.filter(item => item.id !== n.id))} />)}</div>
-      {confirmModal.isOpen && <ConfirmModal message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} })} />}
-      
-      {selectedChild && <StudentDetailModal 
-          student={selectedChild} 
-          onClose={() => setSelectedChild(null)} 
-          onViewPersonalCalendar={(student) => { setSelectedChild(null); setViewingCalendarForStudent(student); }} 
-          onUpdate={handleUpdateStudent} 
-          onAddDocument={handleAddDocument} 
-          onGenerateCurrentInvoice={handleGeneratePDFInvoice} 
-          onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} 
-          onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} 
-          currentUser={currentUser} 
-      />}
-      
-      {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} />}
-      
-      <div style={styles.appContainer}>
-        <aside style={styles.sidebar}>
-          <div>
-            <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
-            <h2 style={styles.sidebarTitle}>General</h2>
-            {[ { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 }, { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus }, { id: 'alumnos', name: 'Alumnos', icon: Users }, { id: 'asistencia', name: 'Asistencia', icon: Clock }, { id: 'calendario', name: 'Calendario', icon: CalendarIcon } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
-            <h2 style={{...styles.sidebarTitle, marginTop: '20px'}}>Administración</h2>
-            {[ { id: 'facturacion', name: 'Facturación', icon: FileText }, { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
-            {currentUser !== 'Gonzalo Navarro' && ( <> <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </> )}
-            {currentUser === 'Gonzalo Navarro' && ( <> {[ { id: 'personal', name: 'Personal', icon: Briefcase }, { id: 'historial', name: 'Historial Web', icon: History }, { id: 'configuracion', name: 'Configuración', icon: SettingsIcon }, ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })} </> )}
-          </div>
-          <div>
-            <div style={styles.currentUserInfo}><p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p></div>
-            <footer style={styles.sidebarFooter}>
-                <p style={{margin: '2px 0', fontWeight: 'bold'}}>Vision Paideia SLU</p>
-                <p style={{margin: '2px 0'}}>B21898341</p>
-                <p style={{margin: '2px 0'}}>C/ Alonso Cano 24, 28003, Madrid</p>
-            </footer>
-          </div>
-        </aside>
-        <main style={styles.mainContent}>
-          <header style={styles.header}>
-            <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
-             <button onClick={handleLogout} style={styles.logoutButton}> <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión </button>
-          </header>
-          <div style={styles.contentArea}>
-            {activeTab === 'dashboard' && <Dashboard />}
-            {activeTab === 'inscripciones' && <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />}
-            {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
-            {activeTab === 'asistencia' && <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />}
-            {activeTab === 'calendario' && <CalendarView />}
-            {activeTab === 'facturacion' && <Invoicing onUpdateStatus={updateInvoiceStatus} onExport={() => handleExport('facturacion')} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} onDeleteInvoice={handleDeleteInvoice} addNotification={addNotification} />}
-            {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
-            {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
-            {activeTab === 'personal' && <StaffLogViewer onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}
-            {activeTab === 'historial' && <AppHistoryViewer onExport={() => handleExport('historial')} />}
-            {activeTab === 'configuracion' && <Settings onSave={handleSaveConfig} addNotification={addNotification} />}
-            {activeTab === 'ayuda' && <Help />}
-          </div>
-        </main>
-      </div>
-    </>
-  );
+    const handleAddDocument = async (studentId: string, documentData: Document, user: string) => {
+        await addDocument(studentId, documentData, user);
+        addNotification(`Documento '${documentData.name}' añadido.`);
+    };
+
+    const handleSaveAttendance = async (data: Omit<Attendance, 'id'>) => {
+        await saveAttendance(data, currentUser);
+        addNotification(`Asistencia de ${data.childName} guardada.`);
+    };
+
+    const handleDeleteInvoice = (invoice: Invoice) => {
+        const onConfirmDelete = async () => {
+            await deleteInvoice(invoice, currentUser);
+            addNotification(`Factura de ${invoice.childName} eliminada.`);
+            setConfirmModal({ isOpen: false, message: '', onConfirm: () => { } });
+        };
+        setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar esta factura de ${invoice.amount}${config.currency} para ${invoice.childName}?`, onConfirm: onConfirmDelete });
+    };
+
+    const handleUpdatePenalty = async (penaltyId: string, updates: Partial<Omit<Penalty, 'id'>>) => {
+        await updatePenalty(penaltyId, updates, currentUser);
+        addNotification("Penalización actualizada.");
+    };
+
+    const handleDeletePenalty = async (penaltyId: string) => {
+        await deletePenalty(penaltyId, currentUser);
+        addNotification("Penalización eliminada.");
+    };
+
+    const handleSaveConfig = async (newConfig: Config) => {
+        await saveConfig(newConfig);
+        addNotification("Configuración guardada.");
+    };
+
+    const handleStaffCheckIn = async () => {
+        await staffCheckIn(currentUser);
+        addNotification(`Entrada registrada.`);
+    };
+
+    const handleStaffCheckOut = async () => {
+        await staffCheckOut(currentUser);
+        addNotification(`Salida registrada.`);
+    };
+
+    const handleUpdateStaffTimeLog = async (logId: string, updatedData: Partial<StaffTimeLog>) => {
+        await updateStaffTimeLog(logId, updatedData, currentUser);
+        addNotification("Registro de fichaje actualizado.");
+    };
+
+    const handleExport = (dataType: string) => {
+        let dataToExport: any[] = [];
+        let fileName = `${dataType}_${new Date().toISOString().split('T')[0]}.csv`;
+
+        switch (dataType) {
+            case 'alumnos':
+                dataToExport = students.map(({ documents, modificationHistory, ...rest }) => rest).sort((a,b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
+                break;
+            case 'asistencia':
+                dataToExport = [...attendance].sort((a, b) => b.date.localeCompare(a.date));
+                break;
+            case 'facturacion':
+                const thisMonth = new Date().getMonth();
+                dataToExport = invoices.filter(i => new Date(i.date).getMonth() === thisMonth).map(({ date, ...rest }) => rest).sort((a,b) => a.childName.localeCompare(b.childName));
+                break;
+            case 'penalizaciones':
+                dataToExport = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
+                break;
+            case 'fichajes':
+                dataToExport = [...staffTimeLogs].sort((a, b) => b.date.localeCompare(a.date));
+                break;
+            case 'historial':
+                dataToExport = [...appHistory].sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+                break;
+        }
+        
+        if (dataToExport.length > 0) {
+            const csv = convertToCSV(dataToExport);
+            downloadCSV(csv, fileName);
+            addNotification(`Exportando ${dataType}.`);
+        } else {
+            addNotification(`No hay datos para exportar en ${dataType}.`);
+        }
+    };
+    
+    // --- INICIO DE LA NUEVA LÓGICA DE FACTURACIÓN ---
+    const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
+        const doc = new jsPDF();
+        const schedule = schedules.find(s => s.id === student.schedule);
+        if (!schedule) {
+            addNotification(`Error: El alumno ${student.name} no tiene un horario válido.`);
+            return;
+        }
+
+        const invoiceDate = new Date(targetYear, targetMonth, 1);
+        const monthName = invoiceDate.toLocaleString('es-ES', { month: 'long' });
+        const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
+
+        const body = [];
+        let total = 0;
+        let enrollmentFee = 0;
+
+        // 1. Cuota base del horario
+        body.push(['Cuota Horario', `${schedule.name}`, `${schedule.price.toFixed(2)} ${config.currency}`]);
+        total += schedule.price;
+
+        // 2. Horario ampliado
+        if (student.extendedSchedule) {
+            body.push(['Extra', 'Horario Ampliado', `30.00 ${config.currency}`]);
+            total += 30;
+        }
+
+        // 3. Penalizaciones del mes
+        const studentPenalties = allPenalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
+        studentPenalties.forEach(p => {
+            body.push(['Penalización', `${p.reason} (${p.date})`, `${p.amount.toFixed(2)} ${config.currency}`]);
+            total += p.amount;
+        });
+
+        // 4. LÓGICA DE MATRÍCULA
+        const startMonthDate = student.startMonth ? new Date(student.startMonth) : null;
+        const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
+        const isCurrentMonth = new Date().getFullYear() === targetYear && new Date().getMonth() === targetMonth;
+        
+        if (!student.enrollmentPaid && isCurrentMonth) {
+            // Si la matrícula NO está pagada, se añade SOLO a la factura del mes actual.
+            enrollmentFee = 100;
+        } else if (student.enrollmentPaid && isFirstMonth) {
+            // Si la matrícula SÍ está pagada, se añade como registro histórico SÓLO en la factura de su primer mes.
+            enrollmentFee = 100;
+        }
+
+        if (enrollmentFee > 0) {
+            body.push(['Matrícula', student.enrollmentPaid ? 'Matrícula (Ya Pagada)' : 'Pago de Matrícula', `${enrollmentFee.toFixed(2)} ${config.currency}`]);
+            total += enrollmentFee;
+        }
+
+        // --- Generación del PDF ---
+        doc.setFontSize(22);
+        doc.text("mi pequeño recreo", 20, 20);
+        doc.setFontSize(16);
+        doc.text(`Factura: ${monthYearStr}`, 20, 30);
+        
+        doc.setFontSize(12);
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 140, 20);
+        doc.text(`Alumno: ${student.name} ${student.surname}`, 20, 45);
+        doc.text(`Titular: ${student.accountHolderName}`, 20, 52);
+        doc.text(`NIF/DNI: ${student.nif || 'No especificado'}`, 20, 59);
+
+        autoTable(doc, {
+            startY: 70,
+            head: [['Concepto', 'Descripción', 'Importe']],
+            body: body,
+            foot: [['Total', '', `${total.toFixed(2)} ${config.currency}`]],
+            theme: 'striped',
+            headStyles: { fillColor: [33, 37, 41] },
+            footStyles: { fillColor: [33, 37, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
+        });
+
+        doc.save(`factura_${student.surname}_${targetYear}_${targetMonth + 1}.pdf`);
+        addNotification(`Generando factura para ${student.name}.`);
+    };
+
+    const handleGeneratePDFInvoice = (student: Student) => {
+        const today = new Date();
+        generateInvoicePDF(student, today.getMonth(), today.getFullYear());
+    };
+
+    const handleGenerateNextMonthPDFInvoice = (student: Student) => {
+        const today = new Date();
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        generateInvoicePDF(student, nextMonth.getMonth(), nextMonth.getFullYear());
+    };
+
+    const handleGeneratePastMonthsInvoice = (student: Student) => {
+        if (!student.startMonth) {
+            addNotification("El alumno no tiene fecha de alta para generar facturas pasadas.");
+            return;
+        }
+        // Genera la factura del primer mes de alta como registro histórico
+        const startDate = new Date(student.startMonth);
+        generateInvoicePDF(student, startDate.getMonth(), startDate.getFullYear());
+    };
+    // --- FIN DE LA NUEVA LÓGICA DE FACTURACIÓN ---
+
+
+    if (isLoading) return <LoadingSpinner />;
+    if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
+
+    const todayForLog = new Date().toISOString().split('T')[0];
+    const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayForLog && log.checkIn && !log.checkOut);
+    const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
+
+    return (
+        <>
+            <div style={styles.notificationContainer}>{notifications.map(n => <Notification key={n.id} message={n.message} onClose={() => setNotifications(p => p.filter(item => item.id !== n.id))} />)}</div>
+            {confirmModal.isOpen && <ConfirmModal message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => { } })} />}
+
+            {selectedChild && <StudentDetailModal
+                student={selectedChild}
+                onClose={() => setSelectedChild(null)}
+                onViewPersonalCalendar={(student) => { setSelectedChild(null); setViewingCalendarForStudent(student); }}
+                onUpdate={handleUpdateStudent}
+                onAddDocument={handleAddDocument}
+                onGenerateCurrentInvoice={handleGeneratePDFInvoice}
+                onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice}
+                onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice}
+                currentUser={currentUser}
+            />}
+
+            {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} />}
+
+            <div style={styles.appContainer}>
+                <aside style={styles.sidebar}>
+                    <div>
+                        <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180} /></div>
+                        <h2 style={styles.sidebarTitle}>General</h2>
+                        {[{ id: 'dashboard', name: 'Panel de Control', icon: BarChart2 }, { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus }, { id: 'alumnos', name: 'Alumnos', icon: Users }, { id: 'asistencia', name: 'Asistencia', icon: Clock }, { id: 'calendario', name: 'Calendario', icon: CalendarIcon }].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ ...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {}) }}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
+                        <h2 style={{ ...styles.sidebarTitle, marginTop: '20px' }}>Administración</h2>
+                        {[{ id: 'facturacion', name: 'Facturación', icon: FileText }, { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign }].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ ...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {}) }}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
+                        {currentUser !== 'Gonzalo Navarro' && (<> <button key='control' onClick={() => setActiveTab('control')} style={{ ...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {}) }}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{ ...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {}) }}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </>)}
+                        {currentUser === 'Gonzalo Navarro' && (<> {[{ id: 'personal', name: 'Personal', icon: Briefcase }, { id: 'historial', name: 'Historial Web', icon: History }, { id: 'configuracion', name: 'Configuración', icon: SettingsIcon },].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ ...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {}) }}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })} </>)}
+                    </div>
+                    <div>
+                        <div style={styles.currentUserInfo}><p style={{ margin: 0 }}>Usuario: <strong>{currentUser}</strong></p></div>
+                        <footer style={styles.sidebarFooter}>
+                            <p style={{ margin: '2px 0', fontWeight: 'bold' }}>Vision Paideia SLU</p>
+                            <p style={{ margin: '2px 0' }}>B21898341</p>
+                            <p style={{ margin: '2px 0' }}>C/ Alonso Cano 24, 28003, Madrid</p>
+                        </footer>
+                    </div>
+                </aside>
+                <main style={styles.mainContent}>
+                    <header style={styles.header}>
+                        <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+                        <button onClick={handleLogout} style={styles.logoutButton}> <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión </button>
+                    </header>
+                    <div style={styles.contentArea}>
+                        {activeTab === 'dashboard' && <Dashboard />}
+                        {activeTab === 'inscripciones' && <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />}
+                        {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
+                        {activeTab === 'asistencia' && <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />}
+                        {activeTab === 'calendario' && <CalendarView />}
+                        {activeTab === 'facturacion' && <Invoicing onUpdateStatus={updateInvoiceStatus} onExport={() => handleExport('facturacion')} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} onDeleteInvoice={handleDeleteInvoice} addNotification={addNotification} />}
+                        {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
+                        {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
+                        {activeTab === 'personal' && <StaffLogViewer onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}
+                        {activeTab === 'historial' && <AppHistoryViewer onExport={() => handleExport('historial')} />}
+                        {activeTab === 'configuracion' && <Settings onSave={handleSaveConfig} addNotification={addNotification} />}
+                        {activeTab === 'ayuda' && <Help />}
+                    </div>
+                </main>
+            </div>
+        </>
+    );
 };
 
 export default App;
