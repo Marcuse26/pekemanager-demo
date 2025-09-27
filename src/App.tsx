@@ -12,7 +12,7 @@ import {
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
-import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, Config } from './types';
+import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, AppHistoryLog, Config } from './types';
 
 import { MiPequenoRecreoLogo } from './components/common/Logos';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -154,7 +154,7 @@ const App = () => {
   };
   
   const handleExport = (dataType: string) => {
-    // ... La lógica de exportar CSV se queda aquí ...
+    // ... La lógica de exportar CSV se queda aquí porque no modifica el estado ...
   };
 
   const handleGeneratePDFInvoice = (student: Student) => {
