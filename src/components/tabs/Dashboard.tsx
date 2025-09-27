@@ -4,7 +4,6 @@ import type { ChartData, ChartOptions } from 'chart.js';
 import { UserCheck, DollarSign, Cake } from 'lucide-react';
 import { styles } from '../../styles';
 import { useAppContext } from '../../context/AppContext';
-import type { Student } from '../../types';
 import ChartComponent from '../common/ChartComponent';
 import webeaLogo from '../../assets/webea-logo.jpg';
 
@@ -58,22 +57,18 @@ const Dashboard = () => {
 
         const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
         const attendanceCounts = [0, 0, 0, 0, 0];
-        const todayDay = today.getDay(); // 0=Dom, 1=Lun,...
-        
-        for (let i = 0; i < 5; i++) {
-            const dayOfWeek = (todayDay - (i + 1) + 7) % 7; // Iterar hacia atrás
-            if (dayOfWeek === 6 || dayOfWeek === 0) continue; // Saltar fin de semana
-            
-            const targetDate = new Date(today);
-            targetDate.setDate(targetDate.getDate() - (i + 1));
-            const targetDateStr = targetDate.toISOString().split('T')[0];
+        let dateCursor = new Date();
+        let daysChecked = 0;
 
-            const count = new Set(attendance.filter(a => a.date === targetDateStr).map(a => a.childId)).size;
-            
-            const weekDayIndex = (dayOfWeek - 1 + 5) % 5;
-            if(weekDayIndex >= 0 && weekDayIndex < 5) {
-                attendanceCounts[weekDayIndex] = count;
+        while (daysChecked < 5 && dateCursor > new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)) {
+            const dayOfWeek = dateCursor.getDay(); // 0=Dom, 1=Lun,...
+            if (dayOfWeek > 0 && dayOfWeek < 6) { // Si es de Lunes a Viernes
+                const dateStr = dateCursor.toISOString().split('T')[0];
+                const count = new Set(attendance.filter(a => a.date === dateStr).map(a => a.childId)).size;
+                attendanceCounts[4 - daysChecked] = count;
+                daysChecked++;
             }
+            dateCursor.setDate(dateCursor.getDate() - 1);
         }
 
         return {
