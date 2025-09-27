@@ -2,8 +2,43 @@
 import { useState, useMemo } from 'react';
 import { Download, Trash2 } from 'lucide-react';
 import { styles } from '../../styles';
-import { useAppContext } from '../../context/AppContext'; // [!code ++]
+import { useAppContext } from '../../context/AppContext';
 import type { Student } from '../../types';
+
+// --- LÓGICA DE FECHAS CORREGIDA ---
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+const firstDayAfterNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 1);
+
+const parseDate = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    const parts = dateString.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+};
+
+const isStudentActiveThisMonth = (student: Student): boolean => {
+    const startDate = parseDate(student.startMonth || '');
+    if (!startDate) return false;
+    const endDate = parseDate(student.plannedEndMonth || '');
+    return startDate < firstDayNextMonth && (!endDate || endDate >= firstDayThisMonth);
+}
+const isStudentActiveLastMonth = (student: Student): boolean => {
+    const startDate = parseDate(student.startMonth || '');
+    if (!startDate) return false;
+    const endDate = parseDate(student.plannedEndMonth || '');
+    return startDate < firstDayThisMonth && (!endDate || endDate >= firstDayLastMonth);
+}
+const isStudentActiveNextMonth = (student: Student): boolean => {
+    const startDate = parseDate(student.startMonth || '');
+    if (!startDate) return false;
+    const endDate = parseDate(student.plannedEndMonth || '');
+    return startDate < firstDayAfterNextMonth && (!endDate || endDate >= firstDayNextMonth);
+}
+// --- FIN LÓGICA DE FECHAS ---
 
 interface StudentListProps {
     onSelectChild: (student: Student) => void;
@@ -11,72 +46,19 @@ interface StudentListProps {
     onExport: () => void;
 }
 
-// ... La lógica de fechas no cambia ...
-const today = new Date();
-today.setHours(0, 0, 0, 0); 
-const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-const isStudentActiveThisMonth = (student: Student): boolean => {
-    if (!student.startMonth) return false;
-    const startDate = new Date(student.startMonth);
-    const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-    const startsBeforeOrDuringMonth = startDate <= lastDayThisMonth;
-    const endsAfterOrDuringMonth = !endDate || endDate >= firstDayThisMonth;
-    return startsBeforeOrDuringMonth && endsAfterOrDuringMonth;
-}
-const isStudentActiveLastMonth = (student: Student): boolean => {
-    if (!student.startMonth) return false;
-    const startDate = new Date(student.startMonth);
-    const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-    const startsBeforeOrDuringLastMonth = startDate <= lastDayLastMonth;
-    const endsAfterOrDuringLastMonth = !endDate || endDate >= firstDayLastMonth;
-    return startsBeforeOrDuringLastMonth && endsAfterOrDuringLastMonth;
-}
-const isStudentActiveNextMonth = (student: Student): boolean => {
-    if (!student.startMonth) return false;
-    const startDate = new Date(student.startMonth);
-    const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-    const startsBeforeOrDuringNextMonth = startDate <= lastDayNextMonth;
-    const endsAfterOrDuringNextMonth = !endDate || endDate >= firstDayNextMonth;
-    return startsBeforeOrDuringNextMonth && endsAfterOrDuringNextMonth;
-}
-
 const StudentList = ({ onSelectChild, onDeleteChild, onExport }: StudentListProps) => {
-  const { students } = useAppContext(); // [!code ++]
+  const { students } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'activos' | 'inactivos' | 'pasados' | 'proximos' | 'todos'>('activos');
 
-  // ... el resto del componente no necesita cambios ...
-  const filteredStudents = useMemo(() => {
-    return students.filter(student =>
-        `${student.name} ${student.surname}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [students, searchTerm]);
+  const filteredStudents = useMemo(() => students.filter(student => `${student.name} ${student.surname}`.toLowerCase().includes(searchTerm.toLowerCase())), [students, searchTerm]);
 
-  const activeStudents = useMemo(() => {
-      return filteredStudents.filter(isStudentActiveThisMonth).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents]);
+  const activeStudents = useMemo(() => filteredStudents.filter(isStudentActiveThisMonth).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)), [filteredStudents]);
+  const inactiveStudents = useMemo(() => filteredStudents.filter(student => !isStudentActiveThisMonth(student)).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)), [filteredStudents]);
+  const lastMonthActiveStudents = useMemo(() => filteredStudents.filter(student => isStudentActiveLastMonth(student) && !isStudentActiveThisMonth(student)).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)), [filteredStudents]);
+  const nextMonthStudents = useMemo(() => filteredStudents.filter(isStudentActiveNextMonth).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)), [filteredStudents]);
+  const allStudentsWithStatus = useMemo(() => filteredStudents.map(student => ({ ...student, isCurrentlyActive: isStudentActiveThisMonth(student) })).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`)), [filteredStudents]);
 
-  const inactiveStudents = useMemo(() => {
-      return filteredStudents.filter(student => !isStudentActiveThisMonth(student)).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents]);
-  
-  const lastMonthActiveStudents = useMemo(() => {
-      return filteredStudents.filter(student => isStudentActiveLastMonth(student) && !isStudentActiveThisMonth(student)).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents]);
-
-  const nextMonthStudents = useMemo(() => {
-      return filteredStudents.filter(isStudentActiveNextMonth).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents]);
-
-  const allStudentsWithStatus = useMemo(() => {
-      return filteredStudents.map(student => ({ ...student, isCurrentlyActive: isStudentActiveThisMonth(student) })).sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
-  }, [filteredStudents]);
-  
   const renderList = () => {
     let listToRender: (Student & { isCurrentlyActive?: boolean })[] = [];
     switch(activeSubTab) {
@@ -132,7 +114,9 @@ const StudentList = ({ onSelectChild, onDeleteChild, onExport }: StudentListProp
             <button style={{...styles.subTabButton, ...(activeSubTab === 'proximos' ? styles.subTabButtonActive : {})}} onClick={() => setActiveSubTab('proximos')}> Activos (próximo mes) ({nextMonthStudents.length}) </button>
             <button style={{...styles.subTabButton, ...(activeSubTab === 'todos' ? styles.subTabButtonActive : {})}} onClick={() => setActiveSubTab('todos')}> Todos ({allStudentsWithStatus.length}) </button>
         </div>
-        <div style={styles.listContainer}> {renderList()} </div>
+        <div style={styles.listContainer}>
+            {renderList()}
+        </div>
     </div>
   );
 };

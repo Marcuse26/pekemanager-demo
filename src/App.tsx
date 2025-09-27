@@ -155,13 +155,18 @@ const App = () => {
   
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
     const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    lastDayThisMonth.setHours(23, 59, 59, 999);
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
     const isStudentActiveThisMonth = (student: Student): boolean => {
         if (!student.startMonth) return false;
-        const startDate = new Date(student.startMonth);
-        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-        return startDate <= lastDayThisMonth && (!endDate || endDate >= new Date(today.getFullYear(), today.getMonth(), 1));
+        const [year, month, day] = student.startMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, day);
+        const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth.split('-').map(Number).join(',')) : null;
+        return startDate <= lastDayThisMonth && (!endDate || endDate >= firstDayThisMonth);
     }
     switch (dataType) {
         case 'alumnos':
@@ -211,10 +216,158 @@ const App = () => {
         addNotification("Ocurrió un error al exportar los datos.");
     }
   };
-  
-  const handleGeneratePDFInvoice = (student: Student) => { /* ... (Las 3 funciones de PDF van aquí) ... */ };
-  const handleGenerateNextMonthPDFInvoice = (student: Student) => { /* ... */ };
-  const handleGeneratePastMonthsInvoice = (student: Student) => { /* ... */ };
+
+  const handleGeneratePDFInvoice = (student: Student) => {
+        if (!student) { addNotification("Error: No se ha seleccionado un alumno."); return; }
+        const today = new Date();
+        const targetMonth = today.getMonth();
+        const targetYear = today.getFullYear();
+        
+        const schedule = schedules.find(s => s.id === student.schedule);
+        if (!schedule) { addNotification("Error: El alumno no tiene horario."); return; }
+        
+        const baseFee = schedule.price;
+        const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+        
+        const penaltiesThisMonth = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
+        const totalPenalties = penaltiesThisMonth.reduce((sum, p) => sum + p.amount, 0);
+
+        const enrollmentFee = !student.enrollmentPaid ? 100 : 0;
+
+        const totalAmount = baseFee + extendedScheduleFee + totalPenalties + enrollmentFee;
+        
+        const docPDF = new jsPDF();
+        docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(32); docPDF.setTextColor('#c55a33');
+        docPDF.text("mi pequeño recreo", 105, 22, { align: 'center' });
+        docPDF.setFont('Helvetica', 'normal'); docPDF.setFontSize(10); docPDF.setTextColor(40, 40, 40);
+        docPDF.text("Vision Paideia SLU", 20, 40); docPDF.text("CIF: B21898341", 20, 45); docPDF.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
+        docPDF.text(`Factura Nº: ${targetYear}-${String(Date.now()).slice(-4)}`, 190, 40, { align: 'right' });
+        docPDF.text(`Fecha: ${today.toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        docPDF.setDrawColor(220, 220, 220); docPDF.rect(15, 60, 180, 25);
+        docPDF.setFont('Helvetica', 'bold'); docPDF.text("Cliente:", 20, 66); docPDF.setFont('Helvetica', 'normal');
+        const clientName = student.accountHolderName || `${student.fatherName || ''} ${student.motherName || ''}`.trim();
+        docPDF.text(`Nombre y apellidos: ${clientName}`, 20, 72); docPDF.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78); docPDF.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
+        const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
+        const tableRows = [];
+        if (enrollmentFee > 0) tableRows.push(["Matrícula", "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
+        tableRows.push([`Jardín de infancia (${today.toLocaleString('es-ES', { month: 'long' })})`, "1", `${baseFee.toFixed(2)} ${config.currency}`, `${baseFee.toFixed(2)} ${config.currency}`]);
+        if (extendedScheduleFee > 0) tableRows.push([`Suplemento Horario Ampliado`, "1", `${extendedScheduleFee.toFixed(2)} ${config.currency}`, `${extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+        if(totalPenalties > 0) tableRows.push([`Penalizaciones por retraso`, "", "", `${totalPenalties.toFixed(2)} ${config.currency}`]);
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        autoTable(docPDF, {
+            startY: 90, head: [tableColumn], body: tableRows, theme: 'grid', headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+            didDrawPage: (data: any) => {
+                docPDF.setFontSize(10);
+                docPDF.text(`Forma de pago: ${student.paymentMethod}`, data.settings.margin.left, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 25);
+                docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(18); docPDF.setTextColor('#c55a33');
+                docPDF.text("mi pequeño recreo", 105, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
+            },
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
+        });
+        docPDF.save(`factura_${student.name}_${student.surname}_${today.toISOString().split('T')[0]}.pdf`);
+        addNotification(`Generando factura PDF para ${student.name}.`);
+  };
+
+  const handleGenerateNextMonthPDFInvoice = (student: Student) => {
+        if (!student) { addNotification("Error: No se ha seleccionado un alumno."); return; }
+        const today = new Date();
+        const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        const schedule = schedules.find(s => s.id === (student.nextMonthSchedule || student.schedule));
+        if (!schedule) { addNotification("Error: El alumno no tiene horario válido."); return; }
+        const baseFee = schedule.price;
+        const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+        const totalAmount = baseFee + extendedScheduleFee;
+        
+        const docPDF = new jsPDF();
+        docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(32); docPDF.setTextColor('#c55a33');
+        docPDF.text("mi pequeño recreo", 105, 22, { align: 'center' });
+        docPDF.setFont('Helvetica', 'normal'); docPDF.setFontSize(10); docPDF.setTextColor(40, 40, 40);
+        docPDF.text("Vision Paideia SLU", 20, 40); docPDF.text("CIF: B21898341", 20, 45); docPDF.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
+        docPDF.text(`Factura Nº: ${nextMonthDate.getFullYear()}-${String(Date.now()).slice(-4)}`, 190, 40, { align: 'right' });
+        docPDF.text(`Fecha: ${today.toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        docPDF.setDrawColor(220, 220, 220); docPDF.rect(15, 60, 180, 25);
+        docPDF.setFont('Helvetica', 'bold'); docPDF.text("Cliente:", 20, 66); docPDF.setFont('Helvetica', 'normal');
+        const clientName = student.accountHolderName || `${student.fatherName || ''} ${student.motherName || ''}`.trim();
+        docPDF.text(`Nombre y apellidos: ${clientName}`, 20, 72); docPDF.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78); docPDF.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
+        const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
+        const tableRows = [];
+        tableRows.push([`Jardín de infancia (${nextMonthDate.toLocaleString('es-ES', { month: 'long' })})`, "1", `${baseFee.toFixed(2)} ${config.currency}`, `${baseFee.toFixed(2)} ${config.currency}`]);
+        if (extendedScheduleFee > 0) tableRows.push([`Suplemento Horario Ampliado`, "1", `${extendedScheduleFee.toFixed(2)} ${config.currency}`, `${extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        autoTable(docPDF, {
+            startY: 90, head: [tableColumn], body: tableRows, theme: 'grid', headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+            didDrawPage: (data: any) => {
+                docPDF.setFontSize(10);
+                docPDF.text(`Forma de pago: ${student.paymentMethod}`, data.settings.margin.left, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 25);
+                docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(18); docPDF.setTextColor('#c55a33');
+                docPDF.text("mi pequeño recreo", 105, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
+            },
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
+        });
+        docPDF.save(`factura_adelantada_${student.name}_${student.surname}_${nextMonthDate.toISOString().split('T')[0]}.pdf`);
+        addNotification(`Generando factura del próximo mes para ${student.name}.`);
+  };
+
+  const handleGeneratePastMonthsInvoice = (student: Student) => {
+        if (!student.startMonth) { addNotification(`No se puede generar factura de meses pasados sin fecha de alta.`); return; }
+        const today = new Date();
+        const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const startDate = new Date(student.startMonth);
+        const monthsToInvoice = [];
+        let cursorDate = new Date(startDate);
+        while (cursorDate < firstDayCurrentMonth) {
+            monthsToInvoice.push(new Date(cursorDate));
+            cursorDate.setMonth(cursorDate.getMonth() + 1);
+        }
+        if (monthsToInvoice.length === 0) { addNotification(`No hay meses anteriores para facturar para ${student.name}.`); return; }
+        const schedule = schedules.find(s => s.id === student.schedule);
+        if(!schedule) { addNotification("El alumno no tiene un horario válido."); return; }
+        
+        const tableRows: (string | { content: string, styles: any })[][] = [];
+        
+        monthsToInvoice.forEach((d, index) => {
+            const isFirstMonth = index === 0;
+            const enrollmentFee = (student.enrollmentPaid && isFirstMonth) ? 100 : 0;
+            const baseFee = schedule.price;
+            const extendedScheduleFee = student.extendedSchedule ? 30 : 0;
+            
+            if (enrollmentFee > 0) {
+                tableRows.push([`Matrícula (${d.toLocaleString('es-ES', { month: 'long', year: 'numeric' })})`, "1", `100.00 ${config.currency}`, `100.00 ${config.currency}`]);
+            }
+            tableRows.push([`Jardín de infancia (${d.toLocaleString('es-ES', { month: 'long', year: 'numeric' })})`, "1", `${baseFee.toFixed(2)} ${config.currency}`, `${baseFee.toFixed(2)} ${config.currency}`]);
+            if (extendedScheduleFee > 0) {
+                tableRows.push([`Suplemento Horario Ampliado (${d.toLocaleString('es-ES', { month: 'long', year: 'numeric' })})`, "1", `${extendedScheduleFee.toFixed(2)} ${config.currency}`, `${extendedScheduleFee.toFixed(2)} ${config.currency}`]);
+            }
+        });
+
+        const totalAmount = tableRows.reduce((sum, row) => sum + parseFloat((row[3] as string).replace('€','')), 0);
+        
+        const docPDF = new jsPDF();
+        docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(32); docPDF.setTextColor('#c55a33');
+        docPDF.text("mi pequeño recreo", 105, 22, { align: 'center' });
+        docPDF.setFont('Helvetica', 'normal'); docPDF.setFontSize(10); docPDF.setTextColor(40, 40, 40);
+        docPDF.text("Vision Paideia SLU", 20, 40); docPDF.text("CIF: B21898341", 20, 45); docPDF.text("C/Alonso Cano 24, 28003, Madrid", 20, 50);
+        docPDF.text(`Factura Nº: ${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, 190, 40, { align: 'right' });
+        docPDF.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 190, 45, { align: 'right' });
+        docPDF.setDrawColor(220, 220, 220); docPDF.rect(15, 60, 180, 25);
+        docPDF.setFont('Helvetica', 'bold'); docPDF.text("Cliente:", 20, 66); docPDF.setFont('Helvetica', 'normal');
+        const clientName = student.accountHolderName || `${student.fatherName || ''} ${student.motherName || ''}`.trim();
+        docPDF.text(`Nombre y apellidos: ${clientName}`, 20, 72); docPDF.text(`NIF: ${student.nif || 'No especificado'}`, 20, 78); docPDF.text(`Dirección: ${student.address || 'No especificada'}`, 100, 78);
+        const tableColumn = ["Concepto", "Cantidad", "Precio unitario", "Importe"];
+        tableRows.push(["", "", { content: "Total", styles: { fontStyle: 'bold' } } as any, { content: `${totalAmount.toFixed(2)} ${config.currency}`, styles: { fontStyle: 'bold' } } as any]);
+        autoTable(docPDF, {
+            startY: 90, head: [tableColumn], body: tableRows, theme: 'grid', headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+            didDrawPage: (data: any) => {
+                docPDF.setFontSize(10);
+                docPDF.text(`Forma de pago: ${student.paymentMethod}`, data.settings.margin.left, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 25);
+                docPDF.setFont('Helvetica', 'bold'); docPDF.setFontSize(18); docPDF.setTextColor('#c55a33');
+                docPDF.text("mi pequeño recreo", 105, (docPDF.internal.pageSize || {getHeight: () => 0}).getHeight() - 10, { align: 'center' });
+            },
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } }
+        });
+        docPDF.save(`factura_total_anterior_${student.name}_${student.surname}.pdf`);
+        addNotification(`Generando factura total anterior para ${student.name}.`);
+  };
 
   if (isLoading) return <LoadingSpinner />;
   if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
@@ -286,5 +439,4 @@ const App = () => {
     </>
   );
 };
-
 export default App;
