@@ -2,14 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { styles } from '../../styles';
 import type { Config } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 interface SettingsProps {
-    config: Config;
     onSave: (config: Config) => void;
     addNotification: (message: string) => void;
 }
 
-const Settings = ({ config, onSave, addNotification }: SettingsProps) => {
+const Settings = ({ onSave, addNotification }: SettingsProps) => {
+    const { config } = useAppContext();
     const [localConfig, setLocalConfig] = useState(config);
     useEffect(() => setLocalConfig(config), [config]);
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setLocalConfig(prev => ({ ...prev, [name]: name === 'lateFee' ? Number(value) : value })); };

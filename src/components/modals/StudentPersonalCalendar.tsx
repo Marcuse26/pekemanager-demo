@@ -3,9 +3,11 @@ import { useState, useRef } from 'react';
 import { DollarSign, Printer, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { styles } from '../../styles';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
-import type { Student, Attendance, Penalty } from '../../types';
+import { useAppContext } from '../../context/AppContext';
+import type { Student } from '../../types';
 
-const StudentPersonalCalendar = ({ student, attendance, penalties, onClose }: { student: Student; attendance: Attendance[]; penalties: Penalty[]; onClose: () => void; }) => {
+const StudentPersonalCalendar = ({ student, onClose }: { student: Student; onClose: () => void; }) => {
+    const { attendance, penalties } = useAppContext();
     const [currentDate, setCurrentDate] = useState(new Date());
     const calendarRef = useRef<HTMLDivElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);

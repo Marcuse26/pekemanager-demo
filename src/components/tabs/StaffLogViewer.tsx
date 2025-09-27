@@ -3,15 +3,16 @@ import { useState } from 'react';
 import { Download, Save, X, Edit } from 'lucide-react';
 import { styles } from '../../styles';
 import type { StaffTimeLog } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 interface StaffLogViewerProps {
-    logs: StaffTimeLog[];
     onExport: () => void; 
     staffUsers: string[];
     onUpdateStaffTimeLog: (logId: string, updatedData: Partial<StaffTimeLog>) => void;
 }
 
-const StaffLogViewer = ({ logs, onExport, staffUsers, onUpdateStaffTimeLog }: StaffLogViewerProps) => {
+const StaffLogViewer = ({ onExport, staffUsers, onUpdateStaffTimeLog }: StaffLogViewerProps) => {
+    const { staffTimeLogs: logs } = useAppContext();
     const [filterUser, setFilterUser] = useState('');
     const [filterDate, setFilterDate] = useState('');
 
@@ -61,9 +62,7 @@ const StaffLogViewer = ({ logs, onExport, staffUsers, onUpdateStaffTimeLog }: St
                         onChange={(e) => setFilterDate(e.target.value)} 
                         style={styles.formInputSmall} 
                     />
-                    {/* --- INICIO DE CAMBIO: Texto del botón --- */}
                     <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Personal</button>
-                    {/* --- FIN DE CAMBIO --- */}
                 </div>
             </div>
             <div style={styles.listContainer}>
