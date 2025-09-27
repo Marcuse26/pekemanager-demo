@@ -241,7 +241,9 @@ const App = () => {
 
     if (enrollmentFee > 0) {
         body.push(['Matrícula', student.enrollmentPaid ? 'Matrícula (Ya Pagada)' : 'Pago de Matrícula', `${enrollmentFee.toFixed(2)} ${config.currency}`]);
-        total += enrollmentFee;
+        if (!student.enrollmentPaid) { // Solo se suma al total si no está pagada
+            total += enrollmentFee;
+        }
     }
 
     doc.setFontSize(22);
@@ -285,8 +287,77 @@ const App = () => {
         addNotification("El alumno no tiene fecha de alta para generar facturas pasadas.");
         return;
     }
+
+    const doc = new jsPDF();
+    const body = [];
+    let total = 0;
+    
     const startDate = new Date(student.startMonth);
-    generateInvoicePDF(student, startDate.getMonth(), startDate.getFullYear());
+    const today = new Date();
+    const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    let loopDate = new Date(startDate);
+
+    while (loopDate < firstDayOfCurrentMonth) {
+        const targetMonth = loopDate.getMonth();
+        const targetYear = loopDate.getFullYear();
+        const monthName = loopDate.toLocaleString('es-ES', { month: 'long' });
+        const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
+
+        const schedule = schedules.find(s => s.id === student.schedule);
+        if (schedule) {
+            body.push(['Cuota Mensual', monthYearStr, `${schedule.price.toFixed(2)} ${config.currency}`]);
+            total += schedule.price;
+        }
+
+        if (student.extendedSchedule) {
+            body.push(['Extra Horario Ampliado', monthYearStr, `30.00 ${config.currency}`]);
+            total += 30;
+        }
+        
+        const isFirstMonth = startDate.getFullYear() === targetYear && startDate.getMonth() === targetMonth;
+        if (student.enrollmentPaid && isFirstMonth) {
+            body.push(['Matrícula (Histórico)', `Pagada en ${monthYearStr}`, `100.00 ${config.currency}`]);
+            // No se suma al total porque ya está pagada
+        }
+
+        const studentPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
+        studentPenalties.forEach(p => {
+            body.push(['Penalización', `${p.reason} (${p.date})`, `${p.amount.toFixed(2)} ${config.currency}`]);
+            total += p.amount;
+        });
+
+        loopDate.setMonth(loopDate.getMonth() + 1);
+    }
+    
+    if (body.length === 0) {
+      addNotification("No hay conceptos que facturar de meses pasados.");
+      return;
+    }
+
+    doc.setFontSize(22);
+    doc.text("mi pequeño recreo", 20, 20);
+    doc.setFontSize(16);
+    doc.text(`Factura Consolidada de Meses Anteriores`, 20, 30);
+    
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 140, 20);
+    doc.text(`Alumno: ${student.name} ${student.surname}`, 20, 45);
+    doc.text(`Titular: ${student.accountHolderName}`, 20, 52);
+    doc.text(`NIF/DNI: ${student.nif || 'No especificado'}`, 20, 59);
+
+    autoTable(doc, {
+        startY: 70,
+        head: [['Concepto', 'Descripción', 'Importe']],
+        body: body,
+        foot: [['Total a Regularizar', '', `${total.toFixed(2)} ${config.currency}`]],
+        theme: 'striped',
+        headStyles: { fillColor: [33, 37, 41] },
+        footStyles: { fillColor: [33, 37, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
+    });
+
+    doc.save(`factura_pasada_${student.surname}.pdf`);
+    addNotification(`Generando factura consolidada para ${student.name}.`);
   };
 
   if (isLoading) return <LoadingSpinner />;
