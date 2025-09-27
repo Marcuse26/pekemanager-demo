@@ -12,7 +12,7 @@ import {
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
-import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, AppHistoryLog } from './types';
+import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, AppHistoryLog, Config } from './types';
 
 import { MiPequenoRecreoLogo } from './components/common/Logos';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -152,17 +152,16 @@ const App = () => {
       await updateStaffTimeLog(logId, updatedData, currentUser);
       addNotification("Registro de fichaje actualizado.");
   };
-
+  
   const handleExport = (dataType: string) => {
     let dataToExport: any[] = [];
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const isStudentActiveThisMonth = (student: Student): boolean => {
         if (!student.startMonth) return false;
         const startDate = new Date(student.startMonth);
         const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-        return startDate <= lastDayThisMonth && (!endDate || endDate >= firstDayThisMonth);
+        return startDate <= lastDayThisMonth && (!endDate || endDate >= new Date(today.getFullYear(), today.getMonth(), 1));
     }
     switch (dataType) {
         case 'alumnos':
@@ -212,16 +211,10 @@ const App = () => {
         addNotification("Ocurrió un error al exportar los datos.");
     }
   };
-
-  const handleGeneratePDFInvoice = (student: Student) => {
-    // ... Lógica de facturas aquí (sin cambios) ...
-  };
-  const handleGenerateNextMonthPDFInvoice = (student: Student) => {
-    // ... Lógica de facturas aquí (sin cambios) ...
-  };
-  const handleGeneratePastMonthsInvoice = (student: Student) => {
-    // ... Lógica de facturas aquí (sin cambios) ...
-  };
+  
+  const handleGeneratePDFInvoice = (student: Student) => { /* ... (Las 3 funciones de PDF van aquí) ... */ };
+  const handleGenerateNextMonthPDFInvoice = (student: Student) => { /* ... */ };
+  const handleGeneratePastMonthsInvoice = (student: Student) => { /* ... */ };
 
   if (isLoading) return <LoadingSpinner />;
   if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
@@ -251,6 +244,7 @@ const App = () => {
       
       <div style={styles.appContainer}>
         <aside style={styles.sidebar}>
+          <div>
             <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
             <h2 style={styles.sidebarTitle}>General</h2>
             {[ { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 }, { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus }, { id: 'alumnos', name: 'Alumnos', icon: Users }, { id: 'asistencia', name: 'Asistencia', icon: Clock }, { id: 'calendario', name: 'Calendario', icon: CalendarIcon } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
@@ -258,14 +252,15 @@ const App = () => {
             {[ { id: 'facturacion', name: 'Facturación', icon: FileText }, { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
             {currentUser !== 'Gonzalo Navarro' && ( <> <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </> )}
             {currentUser === 'Gonzalo Navarro' && ( <> {[ { id: 'personal', name: 'Personal', icon: Briefcase }, { id: 'historial', name: 'Historial Web', icon: History }, { id: 'configuracion', name: 'Configuración', icon: SettingsIcon }, ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })} </> )}
-            <div>
-              <div style={styles.currentUserInfo}><p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p></div>
-              <footer style={styles.sidebarFooter}>
-                  <p style={{margin: '2px 0', fontWeight: 'bold'}}>Vision Paideia SLU</p>
-                  <p style={{margin: '2px 0'}}>B21898341</p>
-                  <p style={{margin: '2px 0'}}>C/ Alonso Cano 24, 28003, Madrid</p>
-              </footer>
-            </div>
+          </div>
+          <div>
+            <div style={styles.currentUserInfo}><p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p></div>
+            <footer style={styles.sidebarFooter}>
+                <p style={{margin: '2px 0', fontWeight: 'bold'}}>Vision Paideia SLU</p>
+                <p style={{margin: '2px 0'}}>B21898341</p>
+                <p style={{margin: '2px 0'}}>C/ Alonso Cano 24, 28003, Madrid</p>
+            </footer>
+          </div>
         </aside>
         <main style={styles.mainContent}>
           <header style={styles.header}>

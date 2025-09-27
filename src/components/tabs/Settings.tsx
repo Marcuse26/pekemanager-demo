@@ -1,4 +1,3 @@
-// Contenido para: src/components/tabs/Settings.tsx
 import React, { useState, useEffect } from 'react';
 import { styles } from '../../styles';
 import type { Config } from '../../types';
@@ -12,13 +11,20 @@ interface SettingsProps {
 const Settings = ({ onSave, addNotification }: SettingsProps) => {
     const { config } = useAppContext();
     const [localConfig, setLocalConfig] = useState(config);
+
     useEffect(() => setLocalConfig(config), [config]);
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setLocalConfig(prev => ({ ...prev, [name]: name === 'lateFee' ? Number(value) : value })); };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => { 
+        const { name, value } = e.target; 
+        setLocalConfig(prev => ({ ...prev, [name]: name === 'lateFee' ? Number(value) : value })); 
+    };
+    
     const handleSave = (e: React.FormEvent) => { 
         e.preventDefault(); 
         onSave(localConfig); 
         addNotification('Configuración guardada.'); 
     };
+
     return (
         <div style={styles.card}><h3 style={styles.cardTitle}>Configuración General</h3>
             <form onSubmit={handleSave}>
@@ -30,5 +36,4 @@ const Settings = ({ onSave, addNotification }: SettingsProps) => {
         </div>
     );
 };
-
 export default Settings;
