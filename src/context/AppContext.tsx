@@ -1,6 +1,7 @@
 // Contenido para: src/context/AppContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { collection, doc, onSnapshot, query, setDoc, updateDoc } from 'firebase/firestore';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { collection, doc, onSnapshot, query, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, ensureAnonymousAuth } from '../firebase/config';
 import { schedules as defaultSchedules } from '../config/schedules';
 import type { Student, Invoice, Attendance, Penalty, Config, Schedule, StaffTimeLog, AppHistoryLog } from '../types';
@@ -67,21 +68,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => unsubscribers.forEach(unsub => unsub());
   }, [userId]);
 
-  // --- LÓGICA DE CAMBIO DE HORARIO AUTOMÁTICO ---
   useEffect(() => {
     if (!students.length || !userId) return;
     const today = new Date();
-    if (today.getDate() === 1) { // Solo se ejecuta el día 1 del mes
+    if (today.getDate() === 1) {
         const lastCheck = localStorage.getItem('lastScheduleCheck');
-        const todayStr = today.toISOString().split('T')[0].slice(0, 7); // YYYY-MM
-        if (lastCheck === todayStr) return; // Ya se ejecutó este mes
+        const todayStr = today.toISOString().split('T')[0].slice(0, 7);
+        if (lastCheck === todayStr) return;
         
         students.forEach(student => {
             if (student.nextMonthSchedule) {
                 const studentDocRef = doc(db, `/artifacts/${appId}/public/data/children/${student.id}`);
                 updateDoc(studentDocRef, {
                     schedule: student.nextMonthSchedule,
-                    nextMonthSchedule: '' // Borramos el campo para el siguiente ciclo
+                    nextMonthSchedule: ''
                 });
                 addAppHistoryLog('Sistema', 'Cambio de Horario', `Se aplicó el nuevo horario programado para ${student.name} ${student.surname}.`);
             }
@@ -89,7 +89,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         localStorage.setItem('lastScheduleCheck', todayStr);
     }
   }, [students, userId, addAppHistoryLog]);
-  // --- FIN DE LÓGICA DE CAMBIO DE HORARIO ---
 
   const value = { students, invoices, attendance, penalties, config, schedules: defaultSchedules, staffTimeLogs, appHistory, isLoading, userId, addAppHistoryLog };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
