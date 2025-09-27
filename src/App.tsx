@@ -1,8 +1,5 @@
 // Contenido para: src/App.tsx
 import { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-// @ts-ignore
-import autoTable from 'jspdf-autotable';
 import {
     Users, Clock, FileText, DollarSign, UserPlus, LogOut,
     Calendar as CalendarIcon, Briefcase, BarChart2, UserCheck,
@@ -10,7 +7,6 @@ import {
 } from 'lucide-react';
 
 import { styles } from './styles';
-import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
 import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, Config } from './types';
 
@@ -35,11 +31,11 @@ import Settings from './components/tabs/Settings';
 import Help from './components/tabs/Help';
 
 const App = () => {
-  const { 
-    students, attendance, invoices, penalties, config, schedules, staffTimeLogs, appHistory, isLoading, 
-    addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance, 
-    updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig, 
-    staffCheckIn, staffCheckOut, updateStaffTimeLog 
+  const {
+    students, config, schedules, staffTimeLogs, isLoading,
+    addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
+    updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig,
+    staffCheckIn, staffCheckOut, updateStaffTimeLog
   } = useAppContext();
   
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
@@ -153,18 +149,18 @@ const App = () => {
       addNotification("Registro de fichaje actualizado.");
   };
   
-  const handleExport = (dataType: string) => {
-    // ... La lógica de exportar CSV se queda aquí porque no modifica el estado ...
+  const handleExport = (_dataType: string) => {
+    addNotification('La función de exportar aún no está implementada.');
   };
 
-  const handleGeneratePDFInvoice = (student: Student) => {
-    // ... La lógica de la factura del mes actual se queda aquí ...
+  const handleGeneratePDFInvoice = (_student: Student) => {
+    addNotification('La generación de facturas PDF aún no está implementada.');
   };
-  const handleGenerateNextMonthPDFInvoice = (student: Student) => {
-    // ... La lógica de la factura del mes siguiente se queda aquí ...
+  const handleGenerateNextMonthPDFInvoice = (_student: Student) => {
+    addNotification('La generación de facturas PDF aún no está implementada.');
   };
-  const handleGeneratePastMonthsInvoice = (student: Student) => {
-    // ... La lógica de la factura de meses pasados se queda aquí ...
+  const handleGeneratePastMonthsInvoice = (_student: Student) => {
+    addNotification('La generación de facturas PDF aún no está implementada.');
   };
 
   if (isLoading) return <LoadingSpinner />;
