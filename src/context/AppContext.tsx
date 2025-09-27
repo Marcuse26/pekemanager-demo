@@ -7,7 +7,6 @@ import { schedules as defaultSchedules } from '../config/schedules';
 import type { Student, Invoice, Attendance, Penalty, Config, Schedule, StaffTimeLog, AppHistoryLog, Document, HistoryLog } from '../types';
 
 interface AppContextType {
-  // State
   students: Student[];
   invoices: Invoice[];
   attendance: Attendance[];
@@ -18,7 +17,6 @@ interface AppContextType {
   appHistory: AppHistoryLog[];
   isLoading: boolean;
   userId: string | null;
-  // Actions
   addAppHistoryLog: (user: string, action: string, details: string) => Promise<void>;
   updateStudent: (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, user: string) => Promise<void>;
   addDocument: (studentId: string, documentData: Document, user: string) => Promise<void>;

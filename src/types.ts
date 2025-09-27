@@ -31,7 +31,7 @@ export interface Student {
   startMonth?: string;
   plannedEndMonth?: string;
   extendedSchedule?: boolean; // Suplemento de horario ampliado
-  nextMonthSchedule?: string; // --- CAMBIO AÑADIDO --- Horario para el próximo mes
+  nextMonthSchedule?: string; // Horario para el próximo mes
 }
 
 export type Attendance = { id: string; childId: number; childName: string; date: string; entryTime?: string; exitTime?: string; droppedOffBy?: string; pickedUpBy?: string; };
