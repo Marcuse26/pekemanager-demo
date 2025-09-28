@@ -94,8 +94,28 @@ const Dashboard = () => {
         return acc;
     }, {} as Record<string, number>);
     const paymentChartData: ChartData<'doughnut'> = { labels: Object.keys(paymentMethodCounts), datasets: [{ label: 'Método de Pago', data: Object.values(paymentMethodCounts), backgroundColor: ['#28a745', '#ffc107', '#007bff', '#6f42c1'], borderWidth: 0 }] };
-
-    const chartOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+    
+    // --- INICIO DEL CAMBIO ---
+    const attendanceChartOptions: ChartOptions<'bar'> = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false,
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                suggestedMax: 10,
+                ticks: {
+                    stepSize: 1, 
+                },
+            },
+        },
+    };
+    // --- FIN DEL CAMBIO ---
+    
     const doughnutOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 10 }}}}};
     const paymentChartOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 20 }}}};
 
@@ -110,7 +130,7 @@ const Dashboard = () => {
             <div style={{...styles.grid, gridTemplateColumns: '1fr 1.5fr 1fr', marginTop: '30px', alignItems: 'start'}}>
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>Asistencia Última Semana</h3>
-                    <ChartComponent type="bar" data={attendanceChartData} options={chartOptions} />
+                    <ChartComponent type="bar" data={attendanceChartData} options={attendanceChartOptions} />
                 </div>
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>Ocupación por Horario</h3>
