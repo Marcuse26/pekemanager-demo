@@ -198,12 +198,53 @@ const App = () => {
         addNotification(`No hay datos para exportar en ${dataType}.`);
     }
   };
-  
+
+  const calculateFlexibleFee = (student: Student, targetMonth: number, targetYear: number) => {
+    const schedule = schedules.find(s => s.id === student.schedule);
+    if (!schedule) return { base: 0, weeks: 0, looseDays: 0 };
+    
+    const studentAttendance = attendance.filter(a => a.childId === student.numericId && new Date(a.date).getMonth() === targetMonth && new Date(a.date).getFullYear() === targetYear);
+    const attendanceByWeek: { [week: number]: number } = {};
+
+    studentAttendance.forEach(a => {
+        const date = new Date(a.date);
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+        const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        attendanceByWeek[weekNumber] = (attendanceByWeek[weekNumber] || 0) + 1;
+    });
+
+    let completeWeeks = 0;
+    let looseDays = 0;
+    Object.values(attendanceByWeek).forEach(daysInWeek => {
+        if (daysInWeek >= 5) {
+            completeWeeks++;
+            looseDays += daysInWeek - 5; 
+        } else {
+            looseDays += daysInWeek;
+        }
+    });
+
+    let weeklyCost = 0;
+    if (completeWeeks > 0) {
+        weeklyCost = (schedule.price / 4) * (completeWeeks + 1);
+    }
+    const dailyCost = looseDays * 30;
+
+    return {
+        base: weeklyCost + dailyCost,
+        weeks: completeWeeks,
+        looseDays: looseDays,
+        weeklyRate: schedule.price / 4,
+    };
+  };
+
   const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
     const doc = new jsPDF();
-    const schedule = schedules.find(s => s.id === student.schedule);
-    if (!schedule) {
-        addNotification(`Error: El alumno ${student.name} no tiene un horario válido.`);
+    const calculation = calculateFlexibleFee(student, targetMonth, targetYear);
+
+    if (calculation.base === 0 && student.enrollmentPaid) {
+        addNotification(`No hay asistencia registrada para ${student.name} en este mes.`);
         return;
     }
 
@@ -213,10 +254,18 @@ const App = () => {
 
     const body = [];
     let total = 0;
-    let enrollmentFee = 0;
 
-    body.push(['Cuota Horario', `${schedule.name}`, `${schedule.price.toFixed(2)} ${config.currency}`]);
-    total += schedule.price;
+    if (calculation.weeks > 0) {
+        const weeklyTotal = (calculation.weeklyRate * (calculation.weeks + 1));
+        body.push(['Semanas Completas', `${calculation.weeks} (+1) x ${calculation.weeklyRate.toFixed(2)}€`, `${weeklyTotal.toFixed(2)} ${config.currency}`]);
+        total += weeklyTotal;
+    }
+
+    if (calculation.looseDays > 0) {
+        const dailyTotal = calculation.looseDays * 30;
+        body.push(['Días Sueltos', `${calculation.looseDays} x 30.00€`, `${dailyTotal.toFixed(2)} ${config.currency}`]);
+        total += dailyTotal;
+    }
 
     if (student.extendedSchedule) {
         body.push(['Extra', 'Horario Ampliado', `30.00 ${config.currency}`]);
@@ -234,16 +283,10 @@ const App = () => {
     const isCurrentMonth = new Date().getFullYear() === targetYear && new Date().getMonth() === targetMonth;
     
     if (!student.enrollmentPaid && isCurrentMonth) {
-        enrollmentFee = 100;
+        body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
+        total += 100;
     } else if (student.enrollmentPaid && isFirstMonth) {
-        enrollmentFee = 100;
-    }
-
-    if (enrollmentFee > 0) {
-        body.push(['Matrícula', student.enrollmentPaid ? 'Matrícula (Ya Pagada)' : 'Pago de Matrícula', `${enrollmentFee.toFixed(2)} ${config.currency}`]);
-        if (!student.enrollmentPaid) { // Solo se suma al total si no está pagada
-            total += enrollmentFee;
-        }
+        body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
     }
 
     doc.setFontSize(22);
@@ -297,17 +340,16 @@ const App = () => {
     const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     let loopDate = new Date(startDate);
-
     while (loopDate < firstDayOfCurrentMonth) {
         const targetMonth = loopDate.getMonth();
         const targetYear = loopDate.getFullYear();
         const monthName = loopDate.toLocaleString('es-ES', { month: 'long' });
         const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
-
-        const schedule = schedules.find(s => s.id === student.schedule);
-        if (schedule) {
-            body.push(['Cuota Mensual', monthYearStr, `${schedule.price.toFixed(2)} ${config.currency}`]);
-            total += schedule.price;
+        
+        const calculation = calculateFlexibleFee(student, targetMonth, targetYear);
+        if (calculation.base > 0) {
+          body.push(['Cuota Flexible', `Asistencia en ${monthYearStr}`, `${calculation.base.toFixed(2)} ${config.currency}`]);
+          total += calculation.base;
         }
 
         if (student.extendedSchedule) {
@@ -318,7 +360,6 @@ const App = () => {
         const isFirstMonth = startDate.getFullYear() === targetYear && startDate.getMonth() === targetMonth;
         if (student.enrollmentPaid && isFirstMonth) {
             body.push(['Matrícula (Histórico)', `Pagada en ${monthYearStr}`, `100.00 ${config.currency}`]);
-            // No se suma al total porque ya está pagada
         }
 
         const studentPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
