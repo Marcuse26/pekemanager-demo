@@ -201,7 +201,9 @@ const App = () => {
 
   const calculateFlexibleFee = (student: Student, targetMonth: number, targetYear: number) => {
     const schedule = schedules.find(s => s.id === student.schedule);
-    if (!schedule) return { base: 0, weeks: 0, looseDays: 0 };
+    // --- INICIO DEL CAMBIO ---
+    if (!schedule) return { base: 0, weeks: 0, looseDays: 0, weeklyRate: 0 };
+    // --- FIN DEL CAMBIO ---
     
     const studentAttendance = attendance.filter(a => a.childId === student.numericId && new Date(a.date).getMonth() === targetMonth && new Date(a.date).getFullYear() === targetYear);
     const attendanceByWeek: { [week: number]: number } = {};
