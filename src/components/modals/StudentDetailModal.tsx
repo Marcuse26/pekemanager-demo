@@ -188,7 +188,9 @@ const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate
 
                 <div style={{display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap'}}>
                      <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, flex: 1}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
-                     <button onClick={() => onDuplicateStudent(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#6f42c1' }}><Copy size={16} style={{marginRight: '8px'}} /> Duplicar para Re-inscripción</button>
+                     {!isStudentActiveThisMonth && (
+                        <button onClick={() => onDuplicateStudent(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#6f42c1' }}><Copy size={16} style={{marginRight: '8px'}} /> Duplicar para Re-inscripción</button>
+                     )}
                      {isStudentActiveThisMonth && (
                         <button onClick={() => onGenerateCurrentInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
                      )}
