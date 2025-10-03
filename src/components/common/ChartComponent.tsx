@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ChartType, ChartData, ChartOptions } from 'chart.js';
-import { Chart } from 'chart.js';
+import Chart from 'chart.js/auto';
 import { styles } from '../../styles';
 
 const ChartComponent = ({ type, data, options }: { type: ChartType; data: ChartData; options: ChartOptions }) => {

@@ -3,7 +3,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { Chart, registerables } from 'chart.js';
 
 // --- INICIALIZACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -20,9 +19,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-// Registrar componentes de Chart.js (importante hacerlo solo una vez)
-Chart.register(...registerables);
 
 // Función helper para gestionar la autenticación anónima
 export const ensureAnonymousAuth = (callback: (uid: string) => void, errorCallback: () => void) => {
