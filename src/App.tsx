@@ -268,21 +268,9 @@ const App = () => {
     const doc = new jsPDF();
     const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
     
-    const startMonthDate = parseDateString(student.startMonth);
-    const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
-
-    if (calculation.base === 0 && (student.enrollmentPaid || !isFirstMonth)) {
-        addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
-        return;
-    }
-
-    const invoiceDate = new Date(targetYear, targetMonth, 1);
-    const monthName = invoiceDate.toLocaleString('es-ES', { month: 'long' });
-    const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
-
     const body = [];
     let total = 0;
-    
+
     if (calculation.base > 0) {
         body.push(['Cuota Flexible', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
         total += calculation.base;
@@ -299,19 +287,29 @@ const App = () => {
         total += p.amount;
     });
 
-    // --- INICIO DE LA LÓGICA CORREGIDA Y DEFINITIVA PARA LA MATRÍCULA ---
-    // El concepto de matrícula solo debe aparecer si la factura es para el primer mes del alumno.
+    const startMonthDate = parseDateString(student.startMonth);
+    const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
+
     if (isFirstMonth) {
         if (student.enrollmentPaid) {
-            // Si está pagada, se muestra a título informativo, sin sumar al total.
             body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
         } else {
-            // Si no está pagada, se añade al concepto y al total a pagar.
             body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
             total += 100;
         }
     }
+    
+    // --- INICIO DE LA LÓGICA CORREGIDA ---
+    // Solo después de añadir todos los posibles conceptos, comprobamos si la factura está vacía.
+    if (body.length === 0) {
+        addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
+        return;
+    }
     // --- FIN DE LA LÓGICA CORREGIDA ---
+    
+    const invoiceDate = new Date(targetYear, targetMonth, 1);
+    const monthName = invoiceDate.toLocaleString('es-ES', { month: 'long' });
+    const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
     
     doc.setFontSize(22);
     doc.text("mi pequeño recreo", 20, 20);
@@ -347,10 +345,8 @@ const App = () => {
     const today = new Date();
     const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-    // Creamos una copia temporal del alumno para la factura
     const studentForInvoice = { ...student };
 
-    // Si hay un horario programado para el próximo mes, lo usamos para el cálculo
     if (studentForInvoice.nextMonthSchedule) {
         studentForInvoice.schedule = studentForInvoice.nextMonthSchedule;
     }
