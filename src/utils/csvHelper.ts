@@ -5,7 +5,8 @@ export const convertToCSV = (data: any[]): string => {
         return '';
     }
     const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(',')];
+    // --- INICIO DEL CAMBIO: Se usa punto y coma como separador ---
+    const csvRows = [headers.join(';')];
 
     for (const row of data) {
         const values = headers.map(header => {
@@ -16,8 +17,9 @@ export const convertToCSV = (data: any[]): string => {
             const stringValue = String(cellData ?? '').replace(/"/g, '""');
             return `"${stringValue}"`;
         });
-        csvRows.push(values.join(','));
+        csvRows.push(values.join(';'));
     }
+    // --- FIN DEL CAMBIO ---
     
     return csvRows.join('\n');
 };

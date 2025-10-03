@@ -21,10 +21,8 @@ const PenaltiesViewer = ({ onExport, onUpdatePenalty, onDeletePenalty }: Penalti
     const handleSaveClick = () => { if (editingPenalty) { onUpdatePenalty(editingPenalty.id, editedData); setEditingPenalty(null); } };
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setEditedData(prev => ({...prev, [name]: name === 'amount' ? Number(value) : value })); };
 
-    // --- INICIO DEL CAMBIO ---
     // Se crea una copia ordenada del array de penalizaciones
     const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
-    // --- FIN DEL CAMBIO ---
 
     return (
         <div style={styles.card}>
