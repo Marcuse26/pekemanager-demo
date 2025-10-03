@@ -201,63 +201,61 @@ const App = () => {
   
   const calculateAttendanceBasedFee = (student: Student, targetMonth: number, targetYear: number) => {
     const schedule = schedules.find(s => s.id === student.schedule);
-    const result = { base: 0, weeks: 0, remainingDays: 0, totalWeeklyCost: 0, totalDailyCost: 0, description: "Sin horario", weekRanges: [] as string[], singleDays: [] as string[] };
-    if (!schedule) return result;
+    if (!schedule) return { base: 0, description: "Sin horario asignado" };
 
     const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
     const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
     const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
     const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
 
+    // Criterio para mes completo (más de 15 días laborables o inscripción el mes entero)
     if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
-        result.base = schedule.price;
-        result.description = `Cuota mensual (${schedule.name})`;
-        return result;
+        return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
     }
 
     if (studentStartDate) {
         const startOfPeriod = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
         const endOfPeriod = (!studentEndDate || studentEndDate > lastDayOfMonth) ? lastDayOfMonth : studentEndDate;
         
-        const businessDaysDates: Date[] = [];
+        let businessDays = 0;
         if (endOfPeriod >= startOfPeriod) {
             let currentDate = new Date(startOfPeriod);
             endOfPeriod.setHours(23, 59, 59, 999);
-
             while (currentDate <= endOfPeriod) {
                 const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                    businessDaysDates.push(new Date(currentDate));
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Excluir Domingo (0) y Sábado (6)
+                    businessDays++;
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
             }
         }
 
-        if (businessDaysDates.length > 0) {
-            result.weeks = Math.floor(businessDaysDates.length / 5);
-            result.remainingDays = businessDaysDates.length % 5;
-            
-            const formatDate = (date: Date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (businessDays > 0) {
+            let base = 0;
+            let description = `${businessDays} día(s) laborable(s)`;
 
-            for (let i = 0; i < result.weeks; i++) {
-                const weekStartDate = businessDaysDates[i * 5];
-                const weekEndDate = businessDaysDates[i * 5 + 4];
-                result.weekRanges.push(`${formatDate(weekStartDate)}-${formatDate(weekEndDate)}`);
+            if (businessDays === 1) {
+                base = 40;
+                description = `1 día suelto`;
+            } else if (businessDays >= 2 && businessDays <= 5) {
+                base = schedule.price / 4;
+                description = `Cuota de 1 semana (${businessDays} días)`;
+            } else if (businessDays >= 6 && businessDays <= 10) {
+                base = schedule.price / 3;
+                description = `Cuota de 2 semanas (${businessDays} días)`;
+            } else if (businessDays >= 11 && businessDays <= 15) {
+                base = schedule.price / 2;
+                description = `Cuota de 3 semanas (${businessDays} días)`;
+            } else { // 16 días o más
+                base = schedule.price;
+                description = `Cuota mensual completa (${businessDays} días)`;
             }
             
-            result.singleDays = businessDaysDates.slice(result.weeks * 5).map(formatDate);
-
-            result.totalWeeklyCost = result.weeks > 0 ? (schedule.price / 4) * (result.weeks + 1) : 0;
-            result.totalDailyCost = result.remainingDays * 40;
-            result.base = result.totalWeeklyCost + result.totalDailyCost;
-            result.description = 'Cuota flexible';
-            
-            return result;
+            return { base, description };
         }
     }
-    
-    result.description = "Sin fecha de alta válida para este mes";
-    return result;
+
+    return { base: 0, description: "Sin días de inscripción válidos para este mes" };
   };
 
   const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
@@ -277,17 +275,7 @@ const App = () => {
     let total = 0;
     
     if (calculation.base > 0) {
-        if (calculation.description.startsWith('Cuota mensual')) {
-             body.push(['Cuota Mensual', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
-        } else {
-            calculation.weekRanges.forEach(range => {
-                const weeklyPortion = calculation.totalWeeklyCost / calculation.weeks;
-                body.push(['Cuota Semanal', `Semana (${range})`, `${weeklyPortion.toFixed(2)} ${config.currency}`]);
-            });
-            if (calculation.remainingDays > 0) {
-                body.push(['Días Sueltos', `Días (${calculation.singleDays.join(', ')})`, `${calculation.totalDailyCost.toFixed(2)} ${config.currency}`]);
-            }
-        }
+        body.push(['Cuota Flexible', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
         total += calculation.base;
     }
 
@@ -372,17 +360,7 @@ const App = () => {
         
         const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
         if (calculation.base > 0) {
-          if (calculation.description.startsWith('Cuota mensual')) {
-             body.push(['Cuota Mensual', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
-          } else {
-             calculation.weekRanges.forEach(range => {
-                const weeklyPortion = calculation.totalWeeklyCost / calculation.weeks;
-                body.push(['Cuota Semanal', `Semana (${range}) (${monthYearStr})`, `${weeklyPortion.toFixed(2)} ${config.currency}`]);
-            });
-            if (calculation.remainingDays > 0) {
-                body.push(['Días Sueltos', `Días (${calculation.singleDays.join(', ')}) (${monthYearStr})`, `${calculation.totalDailyCost.toFixed(2)} ${config.currency}`]);
-            }
-          }
+          body.push(['Cuota Flexible', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
           total += calculation.base;
         }
 

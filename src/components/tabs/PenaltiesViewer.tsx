@@ -1,7 +1,8 @@
+// Contenido para: src/components/tabs/PenaltiesViewer.tsx
 import React, { useState } from 'react';
 import { Download, Edit, Trash2, Save, X } from 'lucide-react';
 import { styles } from '../../styles';
-import { useAppContext } from '../../context/AppContext'; // [!code ++]
+import { useAppContext } from '../../context/AppContext';
 import type { Penalty } from '../../types';
 
 interface PenaltiesViewerProps {
@@ -11,7 +12,7 @@ interface PenaltiesViewerProps {
 }
 
 const PenaltiesViewer = ({ onExport, onUpdatePenalty, onDeletePenalty }: PenaltiesViewerProps) => {
-    const { penalties, config } = useAppContext(); // [!code ++]
+    const { penalties, config } = useAppContext();
     const [editingPenalty, setEditingPenalty] = useState<Penalty | null>(null);
     const [editedData, setEditedData] = useState<{amount: number, reason: string}>({ amount: 0, reason: '' });
 
@@ -20,6 +21,11 @@ const PenaltiesViewer = ({ onExport, onUpdatePenalty, onDeletePenalty }: Penalti
     const handleSaveClick = () => { if (editingPenalty) { onUpdatePenalty(editingPenalty.id, editedData); setEditingPenalty(null); } };
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => { const { name, value } = e.target; setEditedData(prev => ({...prev, [name]: name === 'amount' ? Number(value) : value })); };
 
+    // --- INICIO DEL CAMBIO ---
+    // Se crea una copia ordenada del array de penalizaciones
+    const sortedPenalties = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
+    // --- FIN DEL CAMBIO ---
+
     return (
         <div style={styles.card}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -27,7 +33,8 @@ const PenaltiesViewer = ({ onExport, onUpdatePenalty, onDeletePenalty }: Penalti
                 <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#17a2b8'}}><Download size={16} style={{marginRight: '8px'}} />Exportar Penalizaciones</button>
             </div>
             <div style={styles.listContainer}>
-                {penalties.length > 0 ? penalties.map(penalty => (
+                {/* Se utiliza el nuevo array ordenado para mostrar la lista */}
+                {sortedPenalties.length > 0 ? sortedPenalties.map(penalty => (
                     <div key={penalty.id} style={styles.listItem}>
                         {editingPenalty?.id === penalty.id ? (
                             <div style={{width: '100%', display: 'flex', alignItems: 'center', gap: '10px'}}>
