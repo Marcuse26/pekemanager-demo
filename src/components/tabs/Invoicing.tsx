@@ -1,6 +1,6 @@
 // Contenido para: src/components/tabs/Invoicing.tsx
 import { useState, useMemo } from 'react';
-import { Download, FileText, Trash2 } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { styles } from '../../styles';
 import { useAppContext } from '../../context/AppContext';
 import type { Invoice, Student } from '../../types';
@@ -18,8 +18,8 @@ interface InvoicingProps {
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
 
-const Invoicing = ({ onUpdateStatus, onExport, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, onDeleteInvoice, addNotification }: InvoicingProps) => {
-    const { invoices, students, config } = useAppContext();
+const Invoicing = ({ onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, addNotification }: InvoicingProps) => {
+    const { students, schedules, config } = useAppContext();
     const [activeSubTab, setActiveSubTab] = useState<'actual' | 'pasadas' | 'otros'>('actual');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -108,7 +108,6 @@ const Invoicing = ({ onUpdateStatus, onExport, onGenerateCurrentInvoice, onGener
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <h3 style={{...styles.cardTitle, marginBottom: 0, flexShrink: 0}}>Gestión de Facturas ({listCount})</h3>
                 <input type="text" placeholder={placeholderText} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...styles.formInputSmall, width: '350px', margin: '0 20px'}} />
-                <button onClick={onExport} style={{...styles.actionButton, backgroundColor: '#6c757d', flexShrink: 0}}> <Download size={16} style={{marginRight: '8px'}} />Exportar Listado</button>
             </div>
             <div style={styles.subTabContainer}>
                 <button style={{...styles.subTabButton, ...(activeSubTab === 'actual' ? styles.subTabButtonActive : {})}} onClick={() => { setActiveSubTab('actual'); setSearchTerm(''); }}> Activos ({activeStudents.length}) </button>
@@ -117,27 +116,24 @@ const Invoicing = ({ onUpdateStatus, onExport, onGenerateCurrentInvoice, onGener
             </div>
             <div style={styles.listContainer}>
                 {listToRender.length > 0 ? listToRender.map(student => {
-                    const studentInvoice = invoices.find(i => i.childId === student.numericId && new Date(i.date).getMonth() === currentMonth);
+                    const schedule = schedules.find(s => s.id === student.schedule);
+                    const fee = schedule ? schedule.price : 0;
+                    const extendedFee = student.extendedSchedule ? 30 : 0;
+                    const totalFee = fee + extendedFee;
+
                     return (
                         <div key={student.id} style={styles.listItem}>
                             <div>
                                 <p style={styles.listItemName}>{student.name} {student.surname}</p>
                                 <p style={styles.listItemInfo}>
-                                    {studentInvoice ? `Última Factura: ${new Date(studentInvoice.date).toLocaleDateString('es-ES')} - ${studentInvoice.amount.toFixed(2)}${config.currency}` : 'Sin factura este mes'}
+                                    Cuota Mensual: {totalFee.toFixed(2)}{config.currency}
                                 </p>
                             </div>
                             <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                {studentInvoice ? (
-                                    <select value={studentInvoice.status} onChange={(e) => onUpdateStatus(studentInvoice.id, e.target.value as Invoice['status'])} style={{...styles.formInputSmall, width: '120px'}}>
-                                        <option value="Pendiente">Pendiente</option> <option value="Pagada">Pagada</option> <option value="Vencida">Vencida</option>
-                                    </select>
-                                ) : <span style={{width: '120px', fontSize: '12px', color: '#6c757d', textAlign:'center'}}>N/A</span>}
-                                
+                               <span style={{...styles.pillInfo, width: '120px', justifyContent: 'center'}}>
+                                    {totalFee.toFixed(2)}{config.currency}
+                                </span>
                                 <button onClick={() => handleInvoiceGeneration(student)} style={{...styles.actionButton, ...getButtonStyle(), padding: '5px 10px'}} title={getButtonStyle().title}> <FileText size={14} /> </button>
-                                
-                                {studentInvoice && (
-                                    <button onClick={() => onDeleteInvoice(studentInvoice)} style={styles.deleteButton} title="Eliminar factura de la BBDD"> <Trash2 size={14} /> </button>
-                                )}
                             </div>
                         </div>
                     );

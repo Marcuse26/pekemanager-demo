@@ -29,12 +29,14 @@ const Dashboard = () => {
         const todayStr = today.toISOString().split('T')[0];
         const presentTodayCount = new Set(attendance.filter(a => a.date === todayStr).map(a => a.childId)).size;
 
-        const monthlyBillingTotal = invoices
-            .filter(inv => {
-                const invDate = new Date(inv.date);
-                return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
-            })
-            .reduce((sum, inv) => sum + inv.amount, 0);
+        // --- INICIO DE CAMBIO: Cálculo de facturación basado en cuotas de alumnos activos ---
+        const monthlyBillingTotal = activeStudents.reduce((sum, student) => {
+            const schedule = schedules.find(s => s.id === student.schedule);
+            const baseFee = schedule ? schedule.price : 0;
+            const extendedFee = student.extendedSchedule ? 30 : 0;
+            return sum + baseFee + extendedFee;
+        }, 0);
+        // --- FIN DE CAMBIO ---
 
         const upcomingBirthdaysList = activeStudents.filter(s => {
             const birthDate = new Date(s.birthDate);
@@ -78,7 +80,7 @@ const Dashboard = () => {
             upcomingBirthdays: upcomingBirthdaysList,
             weeklyAttendanceData: { labels: weekDays, data: attendanceCounts }
         };
-    }, [students, attendance, invoices]);
+    }, [students, attendance, schedules]);
 
     const attendanceChartData: ChartData<'bar'> = { labels: weeklyAttendanceData.labels, datasets: [{ label: 'Asistencia Semanal', data: weeklyAttendanceData.data, backgroundColor: 'rgba(0, 123, 255, 0.5)', borderColor: '#007bff', borderWidth: 1, borderRadius: 4 }] };
     
@@ -95,7 +97,6 @@ const Dashboard = () => {
     }, {} as Record<string, number>);
     const paymentChartData: ChartData<'doughnut'> = { labels: Object.keys(paymentMethodCounts), datasets: [{ label: 'Método de Pago', data: Object.values(paymentMethodCounts), backgroundColor: ['#28a745', '#ffc107', '#007bff', '#6f42c1'], borderWidth: 0 }] };
     
-    // --- INICIO DEL CAMBIO ---
     const attendanceChartOptions: ChartOptions<'bar'> = {
         responsive: true,
         maintainAspectRatio: false,
@@ -114,7 +115,6 @@ const Dashboard = () => {
             },
         },
     };
-    // --- FIN DEL CAMBIO ---
     
     const doughnutOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 10 }}}}};
     const paymentChartOptions: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, padding: 20 }}}};
