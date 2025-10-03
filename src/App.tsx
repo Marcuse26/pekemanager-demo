@@ -203,38 +203,42 @@ const App = () => {
     const schedule = schedules.find(s => s.id === student.schedule);
     if (!schedule) return { base: 0, description: "Sin horario asignado" };
 
-    // Comprobar si el alumno está inscrito el mes completo
     const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
     const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
     const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
     const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
 
+    // Criterio 1: Mes completo
     if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
         return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
     }
 
-    // Si no es el mes completo, se calcula por asistencia
-    const studentAttendance = attendance.filter(a => 
-        a.childId === student.numericId && 
-        new Date(a.date).getMonth() === targetMonth && 
-        new Date(a.date).getFullYear() === targetYear
-    );
+    // Criterio 2: Mes incompleto
+    if (studentStartDate) {
+        const enrollmentStart = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
+        const enrollmentEnd = studentEndDate && studentEndDate < lastDayOfMonth ? studentEndDate : lastDayOfMonth;
 
-    const totalDaysAttended = studentAttendance.length;
-    if (totalDaysAttended === 0) return { base: 0, description: "Sin asistencia registrada" };
+        let enrolledDays = 0;
+        if (enrollmentEnd >= enrollmentStart) {
+            const diffTime = Math.abs(enrollmentEnd.getTime() - enrollmentStart.getTime());
+            enrolledDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
 
-    const completeWeeks = Math.floor(totalDaysAttended / 5);
-    const looseDays = totalDaysAttended % 5;
+        if (enrolledDays > 0) {
+            const weeks = Math.floor(enrolledDays / 5);
+            const remainingDays = enrolledDays % 5;
 
-    let weeklyCost = 0;
-    if (completeWeeks > 0) {
-        weeklyCost = (schedule.price / 4) * (completeWeeks + 1);
+            // Nueva fórmula corregida
+            const weeklyCost = weeks > 0 ? (schedule.price / 4) * (weeks + 1) : 0;
+            const dailyCost = remainingDays * 40;
+            const totalCost = weeklyCost + dailyCost;
+            
+            const description = `Cuota flexible: ${weeks} semana(s) y ${remainingDays} día(s)`;
+            return { base: totalCost, description: description };
+        }
     }
-    const dailyCost = looseDays * 30;
-    
-    const description = `${completeWeeks} semana(s) y ${looseDays} día(s) suelto(s)`;
 
-    return { base: weeklyCost + dailyCost, description };
+    return { base: 0, description: "Sin fecha de alta válida para este mes" };
   };
 
   const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
