@@ -201,49 +201,61 @@ const App = () => {
   
   const calculateAttendanceBasedFee = (student: Student, targetMonth: number, targetYear: number) => {
     const schedule = schedules.find(s => s.id === student.schedule);
-    if (!schedule) return { base: 0, description: "Sin horario asignado" };
+    const result = { base: 0, weeks: 0, remainingDays: 0, totalWeeklyCost: 0, totalDailyCost: 0, description: "Sin horario", weekRanges: [] as string[], singleDays: [] as string[] };
+    if (!schedule) return result;
 
     const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
     const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
     const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
     const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
 
-    // Criterio 1: Mes completo
     if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
-        return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
+        result.base = schedule.price;
+        result.description = `Cuota mensual (${schedule.name})`;
+        return result;
     }
 
-    // Criterio 2: Mes incompleto
     if (studentStartDate) {
         const enrollmentStart = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
         const enrollmentEnd = studentEndDate && studentEndDate < lastDayOfMonth ? studentEndDate : lastDayOfMonth;
-
-        let businessDays = 0;
+        
+        const businessDaysDates: Date[] = [];
         if (enrollmentEnd >= enrollmentStart) {
             let currentDate = new Date(enrollmentStart);
             while (currentDate <= enrollmentEnd) {
                 const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Domingo, 6 = Sábado
-                    businessDays++;
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    businessDaysDates.push(new Date(currentDate));
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
             }
         }
 
-        if (businessDays > 0) {
-            const weeks = Math.floor(businessDays / 5);
-            const remainingDays = businessDays % 5;
-
-            const weeklyCost = weeks > 0 ? (schedule.price / 4) * (weeks + 1) : 0;
-            const dailyCost = remainingDays * 40;
-            const totalCost = weeklyCost + dailyCost;
+        if (businessDaysDates.length > 0) {
+            result.weeks = Math.floor(businessDaysDates.length / 5);
+            result.remainingDays = businessDaysDates.length % 5;
             
-            const description = `Cuota flexible: ${weeks} semana(s) y ${remainingDays} día(s) laborable(s)`;
-            return { base: totalCost, description: description };
+            const formatDate = (date: Date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            for (let i = 0; i < result.weeks; i++) {
+                const weekStartDate = businessDaysDates[i * 5];
+                const weekEndDate = businessDaysDates[i * 5 + 4];
+                result.weekRanges.push(`${formatDate(weekStartDate)}-${formatDate(weekEndDate)}`);
+            }
+            
+            result.singleDays = businessDaysDates.slice(result.weeks * 5).map(formatDate);
+
+            result.totalWeeklyCost = result.weeks > 0 ? (schedule.price / 4) * (result.weeks + 1) : 0;
+            result.totalDailyCost = result.remainingDays * 40;
+            result.base = result.totalWeeklyCost + result.totalDailyCost;
+            result.description = 'Cuota flexible';
+            
+            return result;
         }
     }
-
-    return { base: 0, description: "Sin fecha de alta válida para este mes" };
+    
+    result.description = "Sin fecha de alta válida para este mes";
+    return result;
   };
 
   const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
@@ -263,7 +275,17 @@ const App = () => {
     let total = 0;
     
     if (calculation.base > 0) {
-        body.push(['Cuota Flexible', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
+        if (calculation.description.startsWith('Cuota mensual')) {
+             body.push(['Cuota Mensual', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
+        } else {
+            calculation.weekRanges.forEach(range => {
+                const weeklyPortion = calculation.totalWeeklyCost / calculation.weeks;
+                body.push(['Cuota Semanal', `Semana (${range})`, `${weeklyPortion.toFixed(2)} ${config.currency}`]);
+            });
+            if (calculation.remainingDays > 0) {
+                body.push(['Días Sueltos', `Días (${calculation.singleDays.join(', ')})`, `${calculation.totalDailyCost.toFixed(2)} ${config.currency}`]);
+            }
+        }
         total += calculation.base;
     }
 
@@ -348,7 +370,17 @@ const App = () => {
         
         const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
         if (calculation.base > 0) {
-          body.push(['Cuota Flexible', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
+          if (calculation.description.startsWith('Cuota mensual')) {
+             body.push(['Cuota Mensual', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
+          } else {
+             calculation.weekRanges.forEach(range => {
+                const weeklyPortion = calculation.totalWeeklyCost / calculation.weeks;
+                body.push(['Cuota Semanal', `Semana (${range}) (${monthYearStr})`, `${weeklyPortion.toFixed(2)} ${config.currency}`]);
+            });
+            if (calculation.remainingDays > 0) {
+                body.push(['Días Sueltos', `Días (${calculation.singleDays.join(', ')}) (${monthYearStr})`, `${calculation.totalDailyCost.toFixed(2)} ${config.currency}`]);
+            }
+          }
           total += calculation.base;
         }
 
