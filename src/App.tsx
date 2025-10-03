@@ -198,41 +198,51 @@ const App = () => {
         addNotification(`No hay datos para exportar en ${dataType}.`);
     }
   };
-
-  const calculateProratedFee = (student: Student, targetMonth: number, targetYear: number) => {
+  
+  const calculateAttendanceBasedFee = (student: Student, targetMonth: number, targetYear: number) => {
     const schedule = schedules.find(s => s.id === student.schedule);
-    if (!schedule || !student.startMonth) return { base: 0, description: "Sin datos" };
+    if (!schedule) return { base: 0, description: "Sin horario asignado" };
 
-    const startDate = new Date(student.startMonth);
-    const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
-
+    // Comprobar si el alumno está inscrito el mes completo
     const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
     const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
+    const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
+    const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
 
-    let effectiveStartDate = startDate > firstDayOfMonth ? startDate : firstDayOfMonth;
-    let effectiveEndDate = endDate && endDate < lastDayOfMonth ? endDate : lastDayOfMonth;
+    if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
+        return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
+    }
 
-    if (effectiveStartDate > effectiveEndDate || (endDate && effectiveEndDate < firstDayOfMonth) || effectiveStartDate > lastDayOfMonth) {
-        return { base: 0, description: "Fuera de rango" };
+    // Si no es el mes completo, se calcula por asistencia
+    const studentAttendance = attendance.filter(a => 
+        a.childId === student.numericId && 
+        new Date(a.date).getMonth() === targetMonth && 
+        new Date(a.date).getFullYear() === targetYear
+    );
+
+    const totalDaysAttended = studentAttendance.length;
+    if (totalDaysAttended === 0) return { base: 0, description: "Sin asistencia registrada" };
+
+    const completeWeeks = Math.floor(totalDaysAttended / 5);
+    const looseDays = totalDaysAttended % 5;
+
+    let weeklyCost = 0;
+    if (completeWeeks > 0) {
+        weeklyCost = (schedule.price / 4) * (completeWeeks + 1);
     }
+    const dailyCost = looseDays * 30;
     
-    const daysInMonth = lastDayOfMonth.getDate();
-    const enrolledDays = (effectiveEndDate.getTime() - effectiveStartDate.getTime()) / (1000 * 3600 * 24) + 1;
-    
-    if (enrolledDays >= daysInMonth) {
-        return { base: schedule.price, description: `Mes completo (${schedule.name})`};
-    } else {
-        const dailyRate = schedule.price / daysInMonth;
-        return { base: dailyRate * enrolledDays, description: `Prorrateo (${enrolledDays} de ${daysInMonth} días)` };
-    }
+    const description = `${completeWeeks} semana(s) y ${looseDays} día(s) suelto(s)`;
+
+    return { base: weeklyCost + dailyCost, description };
   };
 
   const generateInvoicePDF = (student: Student, targetMonth: number, targetYear: number) => {
     const doc = new jsPDF();
-    const calculation = calculateProratedFee(student, targetMonth, targetYear);
+    const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
     
     if (calculation.base === 0 && student.enrollmentPaid) {
-        addNotification(`El alumno no está inscrito en el mes seleccionado.`);
+        addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
         return;
     }
 
@@ -244,7 +254,7 @@ const App = () => {
     let total = 0;
     
     if (calculation.base > 0) {
-        body.push(['Cuota Mensual', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
+        body.push(['Cuota Flexible', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
         total += calculation.base;
     }
 
@@ -327,9 +337,9 @@ const App = () => {
         const monthName = loopDate.toLocaleString('es-ES', { month: 'long' });
         const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
         
-        const calculation = calculateProratedFee(student, targetMonth, targetYear);
+        const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
         if (calculation.base > 0) {
-          body.push(['Cuota Mensual', calculation.description, `${calculation.base.toFixed(2)} ${config.currency}`]);
+          body.push(['Cuota Flexible', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
           total += calculation.base;
         }
 
