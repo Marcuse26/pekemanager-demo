@@ -1,17 +1,14 @@
 // Contenido para: src/components/tabs/Invoicing.tsx
 import { useState, useMemo } from 'react';
-import { Download, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { styles } from '../../styles';
 import { useAppContext } from '../../context/AppContext';
 import type { Invoice, Student } from '../../types';
 
 interface InvoicingProps {
-    onUpdateStatus: (invoiceId: string, newStatus: Invoice['status']) => void;
-    onExport: () => void;
     onGenerateCurrentInvoice: (student: Student) => void;
     onGenerateNextMonthInvoice: (student: Student) => void;
     onGeneratePastMonthsInvoice: (student: Student) => void;
-    onDeleteInvoice: (invoice: Invoice) => void;
     addNotification: (message: string) => void;
 }
 

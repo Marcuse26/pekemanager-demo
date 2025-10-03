@@ -8,7 +8,7 @@ import ChartComponent from '../common/ChartComponent';
 import webeaLogo from '../../assets/webea-logo.jpg';
 
 const Dashboard = () => {
-    const { students, attendance, invoices, schedules, config } = useAppContext();
+    const { students, attendance, schedules, config } = useAppContext();
 
     const { activeStudents, presentToday, monthlyBilling, upcomingBirthdays, weeklyAttendanceData } = useMemo(() => {
         const today = new Date();
@@ -29,14 +29,12 @@ const Dashboard = () => {
         const todayStr = today.toISOString().split('T')[0];
         const presentTodayCount = new Set(attendance.filter(a => a.date === todayStr).map(a => a.childId)).size;
 
-        // --- INICIO DE CAMBIO: Cálculo de facturación basado en cuotas de alumnos activos ---
         const monthlyBillingTotal = activeStudents.reduce((sum, student) => {
             const schedule = schedules.find(s => s.id === student.schedule);
             const baseFee = schedule ? schedule.price : 0;
             const extendedFee = student.extendedSchedule ? 30 : 0;
             return sum + baseFee + extendedFee;
         }, 0);
-        // --- FIN DE CAMBIO ---
 
         const upcomingBirthdaysList = activeStudents.filter(s => {
             const birthDate = new Date(s.birthDate);
@@ -63,8 +61,8 @@ const Dashboard = () => {
         let daysChecked = 0;
 
         while (daysChecked < 5 && dateCursor > new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)) {
-            const dayOfWeek = dateCursor.getDay(); // 0=Dom, 1=Lun,...
-            if (dayOfWeek > 0 && dayOfWeek < 6) { // Si es de Lunes a Viernes
+            const dayOfWeek = dateCursor.getDay();
+            if (dayOfWeek > 0 && dayOfWeek < 6) {
                 const dateStr = dateCursor.toISOString().split('T')[0];
                 const count = new Set(attendance.filter(a => a.date === dateStr).map(a => a.childId)).size;
                 attendanceCounts[4 - daysChecked] = count;
