@@ -291,21 +291,17 @@ const App = () => {
     const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
 
     if (isFirstMonth) {
-        if (student.enrollmentPaid) {
-            body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
-        } else {
-            body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
+        const enrollmentStatus = student.enrollmentPaid ? 'Ya Pagada' : 'Pendiente';
+        body.push(['Matrícula', `Estado: ${enrollmentStatus}`, `100.00 ${config.currency}`]);
+        if (!student.enrollmentPaid) {
             total += 100;
         }
     }
     
-    // --- INICIO DE LA LÓGICA CORREGIDA ---
-    // Solo después de añadir todos los posibles conceptos, comprobamos si la factura está vacía.
     if (body.length === 0) {
         addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
         return;
     }
-    // --- FIN DE LA LÓGICA CORREGIDA ---
     
     const invoiceDate = new Date(targetYear, targetMonth, 1);
     const monthName = invoiceDate.toLocaleString('es-ES', { month: 'long' });
@@ -389,8 +385,12 @@ const App = () => {
         }
         
         const isFirstMonth = startDate.getFullYear() === targetYear && startDate.getMonth() === targetMonth;
-        if (student.enrollmentPaid && isFirstMonth) {
-            body.push(['Matrícula (Histórico)', `Pagada en ${monthYearStr}`, `100.00 ${config.currency}`]);
+        if (isFirstMonth) {
+          const enrollmentStatus = student.enrollmentPaid ? 'Ya Pagada' : 'Pendiente';
+          body.push(['Matrícula', `Estado: ${enrollmentStatus} (${monthYearStr})`, `100.00 ${config.currency}`]);
+          if (!student.enrollmentPaid) {
+            total += 100;
+          }
         }
 
         const studentPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
