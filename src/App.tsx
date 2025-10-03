@@ -39,7 +39,7 @@ const App = () => {
     students, config, schedules, staffTimeLogs, isLoading, attendance, invoices, penalties, appHistory,
     addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
     updatePenalty, deletePenalty, saveConfig,
-    staffCheckIn, staffCheckOut, updateStaffTimeLog
+    staffCheckIn, staffCheckOut, updateStaffTimeLog, duplicateStudent
   } = useAppContext();
   
   const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true');
@@ -102,6 +102,13 @@ const App = () => {
   const handleUpdateStudent = async (studentId: string, updatedData: Partial<Omit<Student, 'id'>>, user: string) => {
       await updateStudent(studentId, updatedData, user);
       addNotification(`Ficha de ${updatedData.name || ''} guardada.`);
+  };
+
+  const handleDuplicateStudent = async (student: Student) => {
+    await duplicateStudent(student, currentUser);
+    addNotification(`Alumno ${student.name} duplicado correctamente.`);
+    setSelectedChild(null); // Close the modal after duplicating
+    setActiveTab('alumnos'); // Switch to student list to see the new student
   };
   
   const handleAddDocument = async (studentId: string, documentData: Document, user: string) => {
@@ -323,8 +330,17 @@ const App = () => {
 
   const handleGenerateNextMonthPDFInvoice = (student: Student) => {
     const today = new Date();
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    generateInvoicePDF(student, nextMonth.getMonth(), nextMonth.getFullYear());
+    const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+    // Creamos una copia temporal del alumno para la factura
+    const studentForInvoice = { ...student };
+
+    // Si hay un horario programado para el próximo mes, lo usamos para el cálculo
+    if (studentForInvoice.nextMonthSchedule) {
+        studentForInvoice.schedule = studentForInvoice.nextMonthSchedule;
+    }
+
+    generateInvoicePDF(studentForInvoice, nextMonthDate.getMonth(), nextMonthDate.getFullYear());
   };
 
   const handleGeneratePastMonthsInvoice = (student: Student) => {
@@ -425,6 +441,7 @@ const App = () => {
           onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} 
           onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} 
           currentUser={currentUser} 
+          onDuplicateStudent={handleDuplicateStudent}
       />}
       
       {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} />}

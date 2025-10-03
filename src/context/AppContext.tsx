@@ -31,6 +31,7 @@ interface AppContextType {
   updateStaffTimeLog: (logId: string, updatedData: Partial<StaffTimeLog>, currentUser: string) => Promise<void>;
   addChild: (childForm: any, currentUser: string) => Promise<boolean>;
   deleteChild: (childId: string, name: string, currentUser: string) => Promise<void>;
+  duplicateStudent: (student: Student, currentUser: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -143,6 +144,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch(error) { console.error("Error updating student: ", error); }
   };
 
+    const duplicateStudent = async (studentToDuplicate: Student, currentUser: string) => {
+    if (!userId) return;
+
+    // 1. Find base name and calculate new name
+    const baseName = studentToDuplicate.name.replace(/ \d+$/, '');
+    const existingStudents = students.filter(s => s.name.startsWith(baseName));
+    const newName = `${baseName} ${existingStudents.length + 1}`;
+
+    // 2. Create the new student object
+    const { id, modificationHistory, startMonth, plannedEndMonth, ...restOfStudentData } = studentToDuplicate;
+    
+    const newStudent: Omit<Student, 'id'> = {
+      ...restOfStudentData,
+      name: newName,
+      numericId: Date.now(), // New unique numericId
+      startMonth: '', // Reset start month
+      plannedEndMonth: '', // Reset end month
+      modificationHistory: [], // Clear history
+    };
+
+    // 3. Save to Firestore and log
+    try {
+        await addDoc(collection(db, `/artifacts/${appId}/public/data/children`), newStudent);
+        await addAppHistoryLog(currentUser, 'Duplicación', `Se ha duplicado al alumno ${studentToDuplicate.name} como ${newName}.`);
+    } catch(error) {
+        console.error("Error duplicating student: ", error);
+    }
+  };
+
   const addDocument = async (studentId: string, documentData: Document, user: string) => {
     const student = students.find(c => c.id === studentId);
     if (!student || !userId) return;
@@ -213,7 +243,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) { console.error("Error updating time log: ", error); }
   };
   
-  const value = { students, invoices, attendance, penalties, config, schedules: defaultSchedules, staffTimeLogs, appHistory, isLoading, userId, addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance, updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig, staffCheckIn, staffCheckOut, updateStaffTimeLog };
+  const value = { students, invoices, attendance, penalties, config, schedules: defaultSchedules, staffTimeLogs, appHistory, isLoading, userId, addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance, updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig, staffCheckIn, staffCheckOut, updateStaffTimeLog, duplicateStudent };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 

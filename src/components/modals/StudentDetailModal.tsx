@@ -1,6 +1,6 @@
 // Contenido para: src/components/modals/StudentDetailModal.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Save, Edit, X, Paperclip, Upload, History, ChevronRight, Calendar as CalendarIcon, FileText } from 'lucide-react';
+import { Save, Edit, X, Paperclip, Upload, History, ChevronRight, Calendar as CalendarIcon, FileText, Copy } from 'lucide-react';
 import { styles } from '../../styles';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 import { useAppContext } from '../../context/AppContext';
@@ -16,9 +16,10 @@ interface StudentDetailModalProps {
     onGenerateNextMonthInvoice: (student: Student) => void;
     onGeneratePastMonthsInvoice: (student: Student) => void;
     currentUser: string;
+    onDuplicateStudent: (student: Student) => void;
 }
 
-const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser }: StudentDetailModalProps) => {
+const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate, onAddDocument, onGenerateCurrentInvoice, onGenerateNextMonthInvoice, onGeneratePastMonthsInvoice, currentUser, onDuplicateStudent }: StudentDetailModalProps) => {
     const { schedules } = useAppContext();
     const modalRef = useRef<HTMLDivElement>(null);
     useOnClickOutside(modalRef, onClose);
@@ -187,6 +188,7 @@ const StudentDetailModal = ({ student, onClose, onViewPersonalCalendar, onUpdate
 
                 <div style={{display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap'}}>
                      <button onClick={() => onViewPersonalCalendar(student)} style={{...styles.submitButton, flex: 1}}><CalendarIcon size={16} style={{marginRight: '8px'}} /> Ver Calendario Personal</button>
+                     <button onClick={() => onDuplicateStudent(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#6f42c1' }}><Copy size={16} style={{marginRight: '8px'}} /> Duplicar para Re-inscripción</button>
                      {isStudentActiveThisMonth && (
                         <button onClick={() => onGenerateCurrentInvoice(student)} style={{...styles.submitButton, flex: 1, backgroundColor: '#17a2b8'}}><FileText size={16} style={{marginRight: '8px'}} /> Factura Mes Actual</button>
                      )}
