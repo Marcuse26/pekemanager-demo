@@ -216,13 +216,15 @@ const App = () => {
     }
 
     if (studentStartDate) {
-        const enrollmentStart = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
-        const enrollmentEnd = studentEndDate && studentEndDate < lastDayOfMonth ? studentEndDate : lastDayOfMonth;
+        const startOfPeriod = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
+        const endOfPeriod = (!studentEndDate || studentEndDate > lastDayOfMonth) ? lastDayOfMonth : studentEndDate;
         
         const businessDaysDates: Date[] = [];
-        if (enrollmentEnd >= enrollmentStart) {
-            let currentDate = new Date(enrollmentStart);
-            while (currentDate <= enrollmentEnd) {
+        if (endOfPeriod >= startOfPeriod) {
+            let currentDate = new Date(startOfPeriod);
+            endOfPeriod.setHours(23, 59, 59, 999);
+
+            while (currentDate <= endOfPeriod) {
                 const dayOfWeek = currentDate.getDay();
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                     businessDaysDates.push(new Date(currentDate));
