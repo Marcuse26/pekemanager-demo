@@ -51,6 +51,15 @@ const App = () => {
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => {} });
   const [childForm, setChildForm] = useState<StudentFormData>({ name: '', surname: '', birthDate: '', address: '', fatherName: '', motherName: '', phone1: '', phone2: '', parentEmail: '', schedule: '', allergies: '', authorizedPickup: '', enrollmentPaid: false, monthlyPayment: true, paymentMethod: '', accountHolderName: '', nif: '', startMonth: '', plannedEndMonth: '', extendedSchedule: false });
 
+  // Helper para parsear fechas de forma segura sin problemas de zona horaria
+  const parseDateString = (dateStr: string | undefined): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    // new Date(year, monthIndex, day) para evitar timezones
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  };
+  
   useEffect(() => {
       if(selectedChild) {
           const freshStudentData = students.find(c => c.id === selectedChild.id);
@@ -161,8 +170,8 @@ const App = () => {
             const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
             const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             dataToExport = students.map(student => {
-                const startDate = student.startMonth ? new Date(student.startMonth) : null;
-                const endDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+                const startDate = parseDateString(student.startMonth);
+                const endDate = parseDateString(student.plannedEndMonth);
                 const isActive = startDate && startDate < firstDayNextMonth && (!endDate || endDate >= firstDayThisMonth);
                 const { documents, modificationHistory, ...rest } = student;
                 return { ...rest, Estado: isActive ? 'Activo' : 'Inactivo' };
@@ -203,8 +212,8 @@ const App = () => {
 
     const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
     const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
-    const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
-    const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
+    const studentStartDate = parseDateString(student.startMonth);
+    const studentEndDate = parseDateString(student.plannedEndMonth);
 
     if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
         return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
@@ -259,8 +268,10 @@ const App = () => {
     const doc = new jsPDF();
     const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
     
-    // Si no hay cuota y la matrícula ya está pagada (o no aplica), no generar factura.
-    if (calculation.base === 0 && student.enrollmentPaid) {
+    const startMonthDate = parseDateString(student.startMonth);
+    const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
+
+    if (calculation.base === 0 && (student.enrollmentPaid || !isFirstMonth)) {
         addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
         return;
     }
@@ -288,23 +299,20 @@ const App = () => {
         total += p.amount;
     });
 
-    const startMonthDate = student.startMonth ? new Date(student.startMonth) : null;
-    const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
-
-    // --- INICIO DE LA LÓGICA CORREGIDA PARA LA MATRÍCULA ---
+    // --- INICIO DE LA LÓGICA CORREGIDA Y DEFINITIVA PARA LA MATRÍCULA ---
     // El concepto de matrícula solo debe aparecer si la factura es para el primer mes del alumno.
     if (isFirstMonth) {
-      if (student.enrollmentPaid) {
-        // Si está pagada, se muestra a título informativo, sin sumar al total.
-        body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
-      } else {
-        // Si no está pagada, se añade al concepto y al total a pagar.
-        body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
-        total += 100;
-      }
+        if (student.enrollmentPaid) {
+            // Si está pagada, se muestra a título informativo, sin sumar al total.
+            body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
+        } else {
+            // Si no está pagada, se añade al concepto y al total a pagar.
+            body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
+            total += 100;
+        }
     }
     // --- FIN DE LA LÓGICA CORREGIDA ---
-
+    
     doc.setFontSize(22);
     doc.text("mi pequeño recreo", 20, 20);
     doc.setFontSize(16);
@@ -360,9 +368,11 @@ const App = () => {
     const body = [];
     let total = 0;
     
-    const startDate = new Date(student.startMonth);
+    const startDate = parseDateString(student.startMonth);
     const today = new Date();
     const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    if (!startDate) return;
 
     let loopDate = new Date(startDate);
     while (loopDate < firstDayOfCurrentMonth) {
