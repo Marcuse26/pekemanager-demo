@@ -38,7 +38,7 @@ const App = () => {
   const {
     students, config, schedules, staffTimeLogs, isLoading, attendance, invoices, penalties, appHistory,
     addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
-    updateInvoiceStatus, deleteInvoice, updatePenalty, deletePenalty, saveConfig,
+    deleteInvoice, updatePenalty, deletePenalty, saveConfig,
     staffCheckIn, staffCheckOut, updateStaffTimeLog
   } = useAppContext();
   
@@ -112,15 +112,6 @@ const App = () => {
   const handleSaveAttendance = async (data: Omit<Attendance, 'id'>) => {
       await saveAttendance(data, currentUser);
       addNotification(`Asistencia de ${data.childName} guardada.`);
-  };
-  
-  const handleDeleteInvoice = (invoice: Invoice) => {
-      const onConfirmDelete = async () => {
-          await deleteInvoice(invoice, currentUser);
-          addNotification(`Factura de ${invoice.childName} eliminada.`);
-          setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} });
-      };
-      setConfirmModal({ isOpen: true, message: `¿Estás seguro de que quieres eliminar esta factura de ${invoice.amount}${config.currency} para ${invoice.childName}?`, onConfirm: onConfirmDelete });
   };
   
   const handleUpdatePenalty = async (penaltyId: string, updates: Partial<Omit<Penalty, 'id'>>) => {
