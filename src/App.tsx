@@ -208,7 +208,6 @@ const App = () => {
     const studentStartDate = student.startMonth ? new Date(student.startMonth) : null;
     const studentEndDate = student.plannedEndMonth ? new Date(student.plannedEndMonth) : null;
 
-    // Criterio para mes completo (más de 15 días laborables o inscripción el mes entero)
     if (studentStartDate && studentStartDate <= firstDayOfMonth && (!studentEndDate || studentEndDate >= lastDayOfMonth)) {
         return { base: schedule.price, description: `Cuota mensual (${schedule.name})` };
     }
@@ -223,7 +222,7 @@ const App = () => {
             endOfPeriod.setHours(23, 59, 59, 999);
             while (currentDate <= endOfPeriod) {
                 const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Excluir Domingo (0) y Sábado (6)
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                     businessDays++;
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
@@ -246,7 +245,7 @@ const App = () => {
             } else if (businessDays >= 11 && businessDays <= 15) {
                 base = schedule.price / 2;
                 description = `Cuota de 3 semanas (${businessDays} días)`;
-            } else { // 16 días o más
+            } else {
                 base = schedule.price;
                 description = `Cuota mensual completa (${businessDays} días)`;
             }
@@ -470,7 +469,7 @@ const App = () => {
             {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
             {activeTab === 'asistencia' && <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />}
             {activeTab === 'calendario' && <CalendarView />}
-            {activeTab === 'facturacion' && <Invoicing onUpdateStatus={updateInvoiceStatus} onExport={() => handleExport('facturacion')} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} onDeleteInvoice={handleDeleteInvoice} addNotification={addNotification} />}
+            {activeTab === 'facturacion' && <Invoicing addNotification={addNotification} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />}
             {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
             {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
             {activeTab === 'personal' && <StaffLogViewer onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}

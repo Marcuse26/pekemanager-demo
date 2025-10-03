@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { FileText } from 'lucide-react';
 import { styles } from '../../styles';
 import { useAppContext } from '../../context/AppContext';
-import type { Invoice, Student } from '../../types';
+import type { Student } from '../../types';
 
 interface InvoicingProps {
     onGenerateCurrentInvoice: (student: Student) => void;
