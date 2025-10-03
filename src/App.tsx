@@ -259,6 +259,7 @@ const App = () => {
     const doc = new jsPDF();
     const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
     
+    // Si no hay cuota y la matrícula ya está pagada (o no aplica), no generar factura.
     if (calculation.base === 0 && student.enrollmentPaid) {
         addNotification(`No hay conceptos que facturar para ${student.name} en este mes.`);
         return;
@@ -289,14 +290,20 @@ const App = () => {
 
     const startMonthDate = student.startMonth ? new Date(student.startMonth) : null;
     const isFirstMonth = startMonthDate && startMonthDate.getFullYear() === targetYear && startMonthDate.getMonth() === targetMonth;
-    const isCurrentMonth = new Date().getFullYear() === targetYear && new Date().getMonth() === targetMonth;
-    
-    if (!student.enrollmentPaid && isCurrentMonth) {
+
+    // --- INICIO DE LA LÓGICA CORREGIDA PARA LA MATRÍCULA ---
+    // El concepto de matrícula solo debe aparecer si la factura es para el primer mes del alumno.
+    if (isFirstMonth) {
+      if (student.enrollmentPaid) {
+        // Si está pagada, se muestra a título informativo, sin sumar al total.
+        body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
+      } else {
+        // Si no está pagada, se añade al concepto y al total a pagar.
         body.push(['Matrícula', 'Pago de Matrícula', `100.00 ${config.currency}`]);
         total += 100;
-    } else if (student.enrollmentPaid && isFirstMonth) {
-        body.push(['Matrícula', 'Matrícula (Ya Pagada)', `100.00 ${config.currency}`]);
+      }
     }
+    // --- FIN DE LA LÓGICA CORREGIDA ---
 
     doc.setFontSize(22);
     doc.text("mi pequeño recreo", 20, 20);
