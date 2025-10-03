@@ -218,22 +218,27 @@ const App = () => {
         const enrollmentStart = studentStartDate > firstDayOfMonth ? studentStartDate : firstDayOfMonth;
         const enrollmentEnd = studentEndDate && studentEndDate < lastDayOfMonth ? studentEndDate : lastDayOfMonth;
 
-        let enrolledDays = 0;
+        let businessDays = 0;
         if (enrollmentEnd >= enrollmentStart) {
-            const diffTime = Math.abs(enrollmentEnd.getTime() - enrollmentStart.getTime());
-            enrolledDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            let currentDate = new Date(enrollmentStart);
+            while (currentDate <= enrollmentEnd) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Domingo, 6 = Sábado
+                    businessDays++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
         }
 
-        if (enrolledDays > 0) {
-            const weeks = Math.floor(enrolledDays / 5);
-            const remainingDays = enrolledDays % 5;
+        if (businessDays > 0) {
+            const weeks = Math.floor(businessDays / 5);
+            const remainingDays = businessDays % 5;
 
-            // Nueva fórmula corregida
             const weeklyCost = weeks > 0 ? (schedule.price / 4) * (weeks + 1) : 0;
             const dailyCost = remainingDays * 40;
             const totalCost = weeklyCost + dailyCost;
             
-            const description = `Cuota flexible: ${weeks} semana(s) y ${remainingDays} día(s)`;
+            const description = `Cuota flexible: ${weeks} semana(s) y ${remainingDays} día(s) laborable(s)`;
             return { base: totalCost, description: description };
         }
     }
