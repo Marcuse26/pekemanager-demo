@@ -64,7 +64,7 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
 
   return (
     <div style={styles.loginContainer}>
-      <div style={styles.loginBox}> {/* Ancho de 540px (de styles.ts) */}
+      <div style={styles.loginBox} className="loginBox"> {/* Ancho de 540px (de styles.ts) */}
         <PekemanagerLogo size={32} />
         
         {!selectedUser ? (

@@ -419,6 +419,50 @@ const App = () => {
     addNotification(`Generando factura consolidada para ${student.name}.`);
   };
 
+  const responsiveStyles = `
+    @media (max-width: 768px) {
+      .appContainer {
+        flex-direction: column !important;
+        height: auto !important;
+      }
+      .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        border-right: none !important;
+        border-bottom: 1px solid #e9ecef !important;
+      }
+      .mainContent {
+        overflow-y: visible !important;
+      }
+      .header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+      }
+      .contentArea {
+        padding: 15px;
+      }
+      .listContainer {
+        height: auto !important;
+        max-height: 50vh;
+      }
+      .dashboardGrid, .grid {
+        grid-template-columns: 1fr !important;
+      }
+      .loginBox {
+        width: 90% !important;
+        padding: 20px !important;
+      }
+      .modalContent {
+        width: 95% !important;
+        padding: 15px !important;
+      }
+      .modalGrid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  `;
+
   if (isLoading) return <LoadingSpinner />;
   if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
 
@@ -428,6 +472,7 @@ const App = () => {
 
   return (
     <>
+      <style>{responsiveStyles}</style>
       <div style={styles.notificationContainer}>{notifications.map(n => <Notification key={n.id} message={n.message} onClose={() => setNotifications(p => p.filter(item => item.id !== n.id))} />)}</div>
       {confirmModal.isOpen && <ConfirmModal message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ isOpen: false, message: '', onConfirm: () => {} })} />}
       
@@ -446,8 +491,8 @@ const App = () => {
       
       {viewingCalendarForStudent && <StudentPersonalCalendar student={viewingCalendarForStudent} onClose={() => setViewingCalendarForStudent(null)} />}
       
-      <div style={styles.appContainer}>
-        <aside style={styles.sidebar}>
+      <div style={styles.appContainer} className="appContainer">
+        <aside style={styles.sidebar} className="sidebar">
           <div>
             <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
             <h2 style={styles.sidebarTitle}>General</h2>
@@ -466,12 +511,12 @@ const App = () => {
             </footer>
           </div>
         </aside>
-        <main style={styles.mainContent}>
-          <header style={styles.header}>
+        <main style={styles.mainContent} className="mainContent">
+          <header style={styles.header} className="header">
             <h1 style={styles.headerTitle}>{activeTab === 'inscripciones' ? 'Nueva Inscripción' : activeTab === 'control' ? 'Control Horario' : activeTab === 'ayuda' ? 'Ayuda' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
              <button onClick={handleLogout} style={styles.logoutButton}> <LogOut size={16} style={{ marginRight: '8px' }} />Cerrar Sesión </button>
           </header>
-          <div style={styles.contentArea}>
+          <div style={styles.contentArea} className="contentArea">
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'inscripciones' && <NewStudentForm onAddChild={handleAddChild} childForm={childForm} onFormChange={setChildForm} schedules={schedules} />}
             {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
