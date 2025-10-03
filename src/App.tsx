@@ -12,7 +12,7 @@ import {
 import { styles } from './styles';
 import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
-import type { Student, Invoice, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, Config } from './types';
+import type { Student, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, Config } from './types';
 
 import { MiPequenoRecreoLogo } from './components/common/Logos';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -38,7 +38,7 @@ const App = () => {
   const {
     students, config, schedules, staffTimeLogs, isLoading, attendance, invoices, penalties, appHistory,
     addAppHistoryLog, addChild, deleteChild, updateStudent, addDocument, saveAttendance,
-    deleteInvoice, updatePenalty, deletePenalty, saveConfig,
+    updatePenalty, deletePenalty, saveConfig,
     staffCheckIn, staffCheckOut, updateStaffTimeLog
   } = useAppContext();
   
