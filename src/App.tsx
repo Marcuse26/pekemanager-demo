@@ -483,9 +483,8 @@ const App = () => {
   const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayForLog && log.checkIn && !log.checkOut);
   const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
   
-  // Datos de la Guardería
-  const guarderiaInfo = {}; // La constante ha sido eliminada según la solicitud.
-
+  // Datos de la Guardería - ELIMINADOS para evitar el error TS6133
+  
   return (
     <>
       <style>{responsiveStyles}</style>
@@ -546,7 +545,7 @@ const App = () => {
             {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
             {activeTab === 'asistencia' && <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />}
             {activeTab === 'calendario' && <CalendarView />}
-            {activeTab === 'facturacion' && <Invoicing addNotification={addNotification} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />}
+            {activeTab === 'facturacion' && <Invoicing addNotification={addNotification} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />}
             {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
             {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
             {activeTab === 'personal' && <StaffLogViewer onExport={() => handleExport('fichajes')} staffUsers={staffUsersList} onUpdateStaffTimeLog={handleUpdateStaffTimeLog} />}
