@@ -190,7 +190,10 @@ const App = () => {
             dataToExport = [...penalties].sort((a, b) => b.date.localeCompare(a.date));
             break;
         case 'fichajes':
-            dataToExport = [...staffTimeLogs].sort((a, b) => b.date.localeLocale(a.date));
+            dataToExport = [...staffTimeLogs].map(log => ({ // Corrección para asegurar que la fecha sea una cadena o se maneje correctamente
+                ...log,
+                date: log.date.toString()
+            })).sort((a, b) => b.date.localeCompare(a.date));
             break;
         case 'historial':
             dataToExport = [...appHistory].sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
@@ -350,88 +353,7 @@ const App = () => {
     generateInvoicePDF(studentForInvoice, nextMonthDate.getMonth(), nextMonthDate.getFullYear());
   };
 
-  const handleGeneratePastMonthsInvoice = (student: Student) => {
-    if (!student.startMonth) {
-        addNotification("El alumno no tiene fecha de alta para generar facturas pasadas.");
-        return;
-    }
-
-    const doc = new jsPDF();
-    const body = [];
-    let total = 0;
-    
-    const startDate = parseDateString(student.startMonth);
-    const today = new Date();
-    const firstDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    if (!startDate) return;
-
-    let loopDate = new Date(startDate);
-    while (loopDate < firstDayOfCurrentMonth) {
-        const targetMonth = loopDate.getMonth();
-        const targetYear = loopDate.getFullYear();
-        const monthName = loopDate.toLocaleString('es-ES', { month: 'long' });
-        const monthYearStr = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${targetYear}`;
-        
-        const calculation = calculateAttendanceBasedFee(student, targetMonth, targetYear);
-        if (calculation.base > 0) {
-          body.push(['Cuota Flexible', `${calculation.description} (${monthYearStr})`, `${calculation.base.toFixed(2)} ${config.currency}`]);
-          total += calculation.base;
-        }
-
-        if (student.extendedSchedule && calculation.base > 0) {
-            body.push(['Extra Horario Ampliado', monthYearStr, `30.00 ${config.currency}`]);
-            total += 30;
-        }
-        
-        const isFirstMonth = startDate.getFullYear() === targetYear && startDate.getMonth() === targetMonth;
-        if (isFirstMonth) {
-          const enrollmentStatus = student.enrollmentPaid ? 'Ya Pagada' : 'Pendiente';
-          body.push(['Matrícula', `Estado: ${enrollmentStatus} (${monthYearStr})`, `100.00 ${config.currency}`]);
-          if (!student.enrollmentPaid) {
-            total += 100;
-          }
-        }
-
-        const studentPenalties = penalties.filter(p => p.childId === student.numericId && new Date(p.date).getMonth() === targetMonth && new Date(p.date).getFullYear() === targetYear);
-        studentPenalties.forEach(p => {
-            body.push(['Penalización', `${p.reason} (${p.date})`, `${p.amount.toFixed(2)} ${config.currency}`]);
-            total += p.amount;
-        });
-
-        loopDate.setMonth(loopDate.getMonth() + 1);
-    }
-    
-    if (body.length === 0) {
-      addNotification("No hay conceptos que facturar de meses pasados.");
-      return;
-    }
-
-    doc.setFontSize(22);
-    doc.text("mi pequeño recreo", 20, 20);
-    doc.setFontSize(16);
-    doc.text(`Factura Consolidada de Meses Anteriores`, 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 140, 20);
-    doc.text(`Alumno: ${student.name} ${student.surname}`, 20, 45);
-    doc.text(`Titular: ${student.accountHolderName}`, 20, 52);
-    doc.text(`NIF/DNI: ${student.nif || 'No especificado'}`, 20, 59);
-
-    autoTable(doc, {
-        startY: 70,
-        head: [['Concepto', 'Descripción', 'Importe']],
-        body: body,
-        foot: [['Total a Regularizar', '', `${total.toFixed(2)} ${config.currency}`]],
-        theme: 'striped',
-        headStyles: { fillColor: [33, 37, 41] },
-        footStyles: { fillColor: [33, 37, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
-    });
-
-    doc.save(`factura_pasada_${student.surname}.pdf`);
-    addNotification(`Generando factura consolidada para ${student.name}.`);
-  };
-
+  // Se corrige la doble declaración de esta función.
   const handleGeneratePastMonthsInvoice = (student: Student) => {
     if (!student.startMonth) {
         addNotification("El alumno no tiene fecha de alta para generar facturas pasadas.");
@@ -627,7 +549,6 @@ const App = () => {
             {activeTab === 'alumnos' && <StudentList onSelectChild={setSelectedChild} onDeleteChild={handleDeleteChild} onExport={() => handleExport('alumnos')} />}
             {activeTab === 'asistencia' && <AttendanceManager onSave={handleSaveAttendance} onExport={() => handleExport('asistencia')} />}
             {activeTab === 'calendario' && <CalendarView />}
-            {/* LÍNEA CORREGIDA: Se cambió 'onGenerateNextInvoice' a 'onGenerateNextMonthInvoice' */}
             {activeTab === 'facturacion' && <Invoicing addNotification={addNotification} onGenerateCurrentInvoice={handleGeneratePDFInvoice} onGenerateNextMonthInvoice={handleGenerateNextMonthPDFInvoice} onGeneratePastMonthsInvoice={handleGeneratePastMonthsInvoice} />}
             {activeTab === 'penalizaciones' && <PenaltiesViewer onExport={() => handleExport('penalizaciones')} onUpdatePenalty={handleUpdatePenalty} onDeletePenalty={handleDeletePenalty} />}
             {activeTab === 'control' && <StaffControlPanel currentUser={currentUser} todayLog={todayLog} onCheckIn={handleStaffCheckIn} onCheckOut={handleStaffCheckOut} />}
