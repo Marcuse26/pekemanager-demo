@@ -484,11 +484,7 @@ const App = () => {
   const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
   
   // Datos de la Guardería
-  const guarderiaInfo = {
-    name: 'Vision Paideia SLU',
-    nif: 'B21898341',
-    address: 'C/ Alonso Cano 24, 28003, Madrid',
-  };
+  const guarderiaInfo = {}; // La constante ha sido eliminada según la solicitud.
 
   return (
     <>
@@ -534,9 +530,7 @@ const App = () => {
                 <p style={{margin: 0, marginTop: '5px', fontSize: '13px', color: '#dc3545', fontWeight: '600'}}>VERSIÓN DEMO</p>
             </div>
             <footer style={styles.sidebarFooter}>
-                <p style={{margin: '2px 0', fontWeight: 'bold'}}>{guarderiaInfo.name}</p>
-                <p style={{margin: '2px 0'}}>{guarderiaInfo.nif}</p>
-                <p style={{margin: '2px 0'}}>{guarderiaInfo.address}</p>
+                {/* Texto de la guardería eliminado */}
             </footer>
           </div>
           {/* FIN DE CAMBIO */}
