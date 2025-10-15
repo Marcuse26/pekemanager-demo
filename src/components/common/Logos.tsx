@@ -1,6 +1,7 @@
 export const MiPequenoRecreoLogo = ({ width = 150, className = '' }: { width?: number; className?: string }) => (
-    <div style={{ fontFamily: "'Dancing Script', cursive", color: '#c55a33', fontSize: `${width / 5}px`, textAlign: 'center' }} className={className}>
-        mi pequeño recreo
+    // Nuevo componente de logo simple para la demo
+    <div style={{ fontFamily: 'system-ui, sans-serif', color: '#007bff', fontSize: `${width / 5}px`, textAlign: 'center', fontWeight: '900', letterSpacing: '1px' }} className={className}>
+        DEMO
     </div>
 );
 
@@ -17,17 +18,16 @@ export const PekemanagerLogo = ({ size = 24 }: { size?: number }) => (
         {/* Texto "EKEMANAGER" */}
         <span style={{ fontStyle: 'italic', letterSpacing: '-1px' }}>EKEMANAGER</span>
         
-        {/* Texto "DEMO" en la esquina inferior izquierda (Nueva adición) */}
+        {/* Texto "DEMO" integrado */}
         <div style={{
             position: 'absolute',
-            bottom: `${size * -0.5}px`, // Ajusta la posición vertical
-            left: `${size * -0.5}px`,    // Ajusta la posición horizontal
-            fontSize: `${size * 0.5}px`, // Tamaño más pequeño
-            color: '#dc3545',            // Color llamativo (el rojo de error)
-            fontWeight: '900',           // Negrita
+            bottom: `${size * -0.2}px`, 
+            left: `${size * 0.2}px`,    
+            fontSize: `${size * 0.5}px`, 
+            color: '#f39c12',            
+            fontWeight: '900',           
             letterSpacing: '1px',
-            opacity: 0.9,
-            transform: 'rotate(-5deg)'   // Pequeña inclinación para hacerlo más "sello"
+            opacity: 0.8,
         }}>
             DEMO
         </div>

@@ -14,7 +14,7 @@ import { convertToCSV, downloadCSV } from './utils/csvHelper';
 import { useAppContext } from './context/AppContext';
 import type { Student, StaffTimeLog, NotificationMessage, StudentFormData, Document, Penalty, Attendance, Config } from './types';
 
-import { MiPequenoRecreoLogo } from './components/common/Logos';
+import { MiPequenoRecreoLogo } from './components/common/Logos'; // Ahora es el logo simple "DEMO"
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Notification } from './components/common/Notification';
 import { ConfirmModal } from './components/common/ConfirmModal';
@@ -482,6 +482,13 @@ const App = () => {
   const todayForLog = new Date().toISOString().split('T')[0];
   const todayLog = staffTimeLogs.find(log => log.userName === currentUser && log.date === todayForLog && log.checkIn && !log.checkOut);
   const staffUsersList = [...new Set(staffTimeLogs.map(log => log.userName))];
+  
+  // Datos de la Guardería
+  const guarderiaInfo = {
+    name: 'Vision Paideia SLU',
+    nif: 'B21898341',
+    address: 'C/ Alonso Cano 24, 28003, Madrid',
+  };
 
   return (
     <>
@@ -507,24 +514,32 @@ const App = () => {
       <div style={styles.appContainer} className="appContainer">
         <aside style={styles.sidebar} className="sidebar">
           <div>
-            <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}><MiPequenoRecreoLogo width={180}/></div>
+            {/* INICIO DE CAMBIO: Sustituir Logo por el Logo DEMO */}
+            <div style={{ padding: '20px 15px', display: 'flex', justifyContent: 'center' }}>
+                <MiPequenoRecreoLogo width={180}/>
+            </div>
+            {/* FIN DE CAMBIO */}
+            
             <h2 style={styles.sidebarTitle}>General</h2>
             {[ { id: 'dashboard', name: 'Panel de Control', icon: BarChart2 }, { id: 'inscripciones', name: 'Nueva Inscripción', icon: UserPlus }, { id: 'alumnos', name: 'Alumnos', icon: Users }, { id: 'asistencia', name: 'Asistencia', icon: Clock }, { id: 'calendario', name: 'Calendario', icon: CalendarIcon } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
             <h2 style={{...styles.sidebarTitle, marginTop: '20px'}}>Administración</h2>
             {[ { id: 'facturacion', name: 'Facturación', icon: FileText }, { id: 'penalizaciones', name: 'Penalizaciones', icon: DollarSign } ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })}
-            {/* INICIO DE CAMBIO: Lógica de permisos */}
-            {currentUser !== 'Usuario Principal' && ( <> <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.sidebarButtonActive : {})}}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </> )}
+            {currentUser !== 'Usuario Principal' && ( <> <button key='control' onClick={() => setActiveTab('control')} style={{...styles.sidebarButton, ...(activeTab === 'control' ? styles.subTabButtonActive : {})}}> <UserCheck size={20} style={{ marginRight: '12px' }} /><span>Control Horario</span> </button> <button key='ayuda' onClick={() => setActiveTab('ayuda')} style={{...styles.sidebarButton, ...(activeTab === 'ayuda' ? styles.sidebarButtonActive : {})}}> <HelpCircle size={20} style={{ marginRight: '12px' }} /><span>Ayuda</span> </button> </> )}
             {currentUser === 'Usuario Principal' && ( <> {[ { id: 'personal', name: 'Personal', icon: Briefcase }, { id: 'historial', name: 'Historial Web', icon: History }, { id: 'configuracion', name: 'Configuración', icon: SettingsIcon }, ].map(tab => { const Icon = tab.icon; const isActive = activeTab === tab.id; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{...styles.sidebarButton, ...(isActive ? styles.sidebarButtonActive : {})}}><Icon size={20} style={{ marginRight: '12px' }} /><span>{tab.name}</span></button>); })} </> )}
-            {/* FIN DE CAMBIO */}
           </div>
+          {/* INICIO DE CAMBIO: Pie de página con datos de la guardería y Versión Demo */}
           <div>
-            <div style={styles.currentUserInfo}><p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p></div>
+            <div style={styles.currentUserInfo}>
+                <p style={{margin: 0}}>Usuario: <strong>{currentUser}</strong></p>
+                <p style={{margin: 0, marginTop: '5px', fontSize: '13px', color: '#dc3545', fontWeight: '600'}}>VERSIÓN DEMO</p>
+            </div>
             <footer style={styles.sidebarFooter}>
-                <p style={{margin: '2px 0', fontWeight: 'bold'}}>Vision Paideia SLU</p>
-                <p style={{margin: '2px 0'}}>B21898341</p>
-                <p style={{margin: '2px 0'}}>C/ Alonso Cano 24, 28003, Madrid</p>
+                <p style={{margin: '2px 0', fontWeight: 'bold'}}>{guarderiaInfo.name}</p>
+                <p style={{margin: '2px 0'}}>{guarderiaInfo.nif}</p>
+                <p style={{margin: '2px 0'}}>{guarderiaInfo.address}</p>
             </footer>
           </div>
+          {/* FIN DE CAMBIO */}
         </aside>
         <main style={styles.mainContent} className="mainContent">
           <header style={styles.header} className="header">
