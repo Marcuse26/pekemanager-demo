@@ -8,8 +8,7 @@ interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
-// --- INICIO DE CAMBIOS: Lista final de usuarios ---
-// Nueva lista de perfiles para el proyecto demo
+// --- INICIO DE CAMBIOS: Lista de usuarios actualizada ---
 const userProfiles = [
     // Usuario Principal (ex-Gonzalo) con nueva contraseña
     { id: 'Usuario Principal', displayName: 'Usuario Principal', password: 'Webeademo1', avatarInitial: 'P' },
@@ -77,6 +76,12 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
     <div style={styles.loginContainer}>
       <div style={styles.loginBox} className="loginBox"> {/* Ancho de 540px (de styles.ts) */}
         <PekemanagerLogo size={32} />
+        
+        {/* --- INICIO DE CAMBIO: Texto de Demo bajo el logo --- */}
+        <div style={{ fontSize: '14px', color: '#dc3545', fontWeight: '600', marginBottom: '30px', marginTop: '10px' }}>
+            PROYECTO DEMO / BASE DE DATOS NUEVA
+        </div>
+        {/* --- FIN DE CAMBIO --- */}
         
         {!selectedUser ? (
             <>
