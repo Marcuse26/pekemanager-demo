@@ -9,13 +9,12 @@ interface LoginScreenProps {
 }
 
 // --- INICIO DE CAMBIOS: Lista final de usuarios ---
-// Ya no existen 'trabajador1', 'trabajador2', etc.
+// Nueva lista de perfiles para el proyecto demo
 const userProfiles = [
-    { id: 'Gonzalo Navarro', displayName: 'Gonzalo Navarro', password: 'gonzalo9021', avatarInitial: 'G' },
-    { id: 'Laura Villar', displayName: 'Laura Villar', password: 'villar3345', avatarInitial: '1' },
-    { id: 'Mercedes Mora', displayName: 'Mercedes Mora', password: 'mora7789', avatarInitial: '2' },
-    { id: 'Laura García', displayName: 'Laura García', password: 'garcia2201', avatarInitial: '3' },
-    { id: 'Ashley Bugarin', displayName: 'Ashley Bugarin', password: 'bugarin4567', avatarInitial: '4' },
+    // Usuario Principal (ex-Gonzalo) con nueva contraseña
+    { id: 'Usuario Principal', displayName: 'Usuario Principal', password: 'Webeademo1', avatarInitial: 'P' },
+    // Nuevo perfil de Trabajador sin contraseña (acceso rápido)
+    { id: 'Trabajador', displayName: 'Trabajador', password: '', avatarInitial: 'T' },
 ];
 // --- FIN DE CAMBIOS ---
 
@@ -39,6 +38,12 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
     const userProfile = userProfiles.find(p => p.id === selectedUser);
     const expectedPassword = userProfile?.password;
 
+    // Si la contraseña es vacía (perfil de "Trabajador"), el login es inmediato.
+    if (expectedPassword === '') {
+        onLogin(selectedUser);
+        return;
+    }
+    
     if (expectedPassword && password === expectedPassword) {
       onLogin(selectedUser); 
     } else {
@@ -48,8 +53,14 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   };
 
   const handleUserSelect = (userId: string) => { 
-      setSelectedUser(userId);
-      setError('');
+      // Si el perfil seleccionado es "Trabajador" (contraseña vacía), loguear inmediatamente
+      const profile = userProfiles.find(p => p.id === userId);
+      if (profile?.password === '') {
+          onLogin(userId);
+      } else {
+          setSelectedUser(userId);
+          setError('');
+      }
   };
 
   const handleSwitchUser = () => {
@@ -59,8 +70,8 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
   };
 
   const selectedProfile = userProfiles.find(p => p.id === selectedUser);
-  const gonzaloProfile = userProfiles.find(p => p.id === 'Gonzalo Navarro');
-  const workerProfiles = userProfiles.filter(p => p.id !== 'Gonzalo Navarro');
+  const adminProfile = userProfiles.find(p => p.id === 'Usuario Principal');
+  const workerProfile = userProfiles.find(p => p.id === 'Trabajador');
 
   return (
     <div style={styles.loginContainer}>
@@ -73,26 +84,26 @@ const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                 
                 <div style={{...styles.userSelectionContainer, flexDirection: 'column', alignItems: 'center'}}>
                     
-                    {/* Fila 1: Gonzalo */}
-                    {gonzaloProfile && (
-                        <div key={gonzaloProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(gonzaloProfile.id)}>
+                    {/* Fila 1: Usuario Principal */}
+                    {adminProfile && (
+                        <div key={adminProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(adminProfile.id)}>
                             <div style={styles.userAvatar}>
-                                <span style={avatarTextStyle}>{gonzaloProfile.avatarInitial}</span>
+                                <span style={avatarTextStyle}>{adminProfile.avatarInitial}</span>
                             </div>
-                            <span style={styles.userName}>{gonzaloProfile.displayName}</span>
+                            <span style={styles.userName}>{adminProfile.displayName}</span>
                         </div>
                     )}
 
-                    {/* Fila 2: Todos los trabajadores (en una sola fila) */}
+                    {/* Fila 2: Trabajador (si existe) */}
                     <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap'}}>
-                        {workerProfiles.map(profile => ( 
-                            <div key={profile.id} style={styles.userProfile} onClick={() => handleUserSelect(profile.id)}>
+                        {workerProfile && ( 
+                            <div key={workerProfile.id} style={styles.userProfile} onClick={() => handleUserSelect(workerProfile.id)}>
                                 <div style={styles.userAvatar}>
-                                    <span style={avatarTextStyle}>{profile.avatarInitial}</span>
+                                    <span style={avatarTextStyle}>{workerProfile.avatarInitial}</span>
                                 </div>
-                                <span style={styles.userName}>{profile.displayName}</span>
+                                <span style={styles.userName}>{workerProfile.displayName}</span>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </>
