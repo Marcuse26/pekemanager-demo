@@ -47,7 +47,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   
-  const appId = 'pekemanager-app';
+  // *** CAMBIO CLAVE: Nuevo ID de la aplicación para el aislamiento de datos. ***
+  const appId = 'pekemanager-demo-app';
 
   const addAppHistoryLog = useCallback(async (user: string, action: string, details: string) => {
     if (!userId) return;
@@ -60,7 +61,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [userId]);
   
   useEffect(() => {
-    const unsubscribe = ensureAnonymousAuth( (uid) => { setUserId(uid); setIsLoading(false); }, () => { setIsLoading(false); alert("Error crítico: No se pudo conectar a la base de datos."); });
+    const unsubscribe = ensureAnonymousAuth( (uid) => { setUserId(uid); setIsLoading(false); }, () => { setIsLoading(false); console.error("Error crítico: No se pudo conectar a la base de datos."); });
     return () => unsubscribe();
   }, []);
 
